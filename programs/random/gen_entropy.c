@@ -91,6 +91,9 @@ cleanup:
     fclose( f );
     mbedtls_entropy_free( &entropy );
 
+    if( ret != 0 && ret != 1 )
+        ret = 1;
+
     return( ret );
 }
 #endif /* MBEDTLS_ENTROPY_C */

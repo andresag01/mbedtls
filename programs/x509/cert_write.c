@@ -661,6 +661,9 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
+    if( ret != 0 && ret != 1 )
+        ret = 1;
+
     return( ret );
 }
 #endif /* MBEDTLS_X509_CRT_WRITE_C && MBEDTLS_X509_CRT_PARSE_C &&

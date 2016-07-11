@@ -301,6 +301,9 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
+    if( ret != 0 && ret != 1 )
+        ret = 1;
+
     return( ret );
 }
 #endif /* MBEDTLS_AES_C && MBEDTLS_DHM_C && MBEDTLS_ENTROPY_C &&

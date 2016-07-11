@@ -392,6 +392,7 @@ exit:
 #else
         mbedtls_printf("\n");
 #endif
+        ret = 1;
     }
 
     mbedtls_pk_free( &key );

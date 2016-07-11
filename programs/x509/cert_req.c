@@ -339,6 +339,9 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
+    if( ret != 0 && ret != 1 )
+        ret = 1;
+
     return( ret );
 }
 #endif /* MBEDTLS_X509_CSR_WRITE_C && MBEDTLS_PK_PARSE_C && MBEDTLS_FS_IO &&

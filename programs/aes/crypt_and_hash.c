@@ -546,6 +546,9 @@ exit:
     mbedtls_cipher_free( &cipher_ctx );
     mbedtls_md_free( &md_ctx );
 
+    if( ret != 0 && ret != 1)
+        ret = 1;
+
     return( ret );
 }
 #endif /* MBEDTLS_CIPHER_C && MBEDTLS_MD_C && MBEDTLS_FS_IO */

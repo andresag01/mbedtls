@@ -817,6 +817,8 @@ int main( int argc, char *argv[] )
 
     mbedtls_printf(" ok\n" );
 
+    ret = 0;
+
     mbedtls_ssl_close_notify( &ssl );
 
 exit:
@@ -834,6 +836,9 @@ exit:
     mbedtls_printf( "  + Press Enter to exit this program.\n" );
     fflush( stdout ); getchar();
 #endif
+
+    if( ret != 0 && ret != 1 )
+        ret = 1;
 
     return( ret );
 }

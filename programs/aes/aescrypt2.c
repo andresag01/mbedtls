@@ -447,6 +447,9 @@ exit:
     mbedtls_aes_free( &aes_ctx );
     mbedtls_md_free( &sha_ctx );
 
+    if( ret != 0 && ret != 1)
+        ret = 1;
+
     return( ret );
 }
 #endif /* MBEDTLS_AES_C && MBEDTLS_SHA256_C && MBEDTLS_FS_IO */
