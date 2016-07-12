@@ -30,8 +30,10 @@
 #else
 #include <stdio.h>
 #include <stdlib.h>
-#define mbedtls_printf     printf
-#define mbedtls_time_t     time_t
+#define mbedtls_printf       printf
+#define mbedtls_time_t       time_t
+#define MBEDTLS_EXIT_SUCCESS EXIT_SUCCESS
+#define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
 #endif
 
 #if !defined(MBEDTLS_BIGNUM_C) || !defined(MBEDTLS_ENTROPY_C) ||   \
@@ -191,8 +193,8 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    if( ret != 0 && ret != 1)
-        ret = 1;
+    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
+        ret = MBEDTLS_EXIT_FAILURE;
 
     return( ret );
 }

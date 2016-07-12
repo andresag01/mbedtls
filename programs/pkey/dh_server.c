@@ -29,8 +29,11 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf     printf
-#define mbedtls_time_t     time_t
+#include <stdlib.h>
+#define mbedtls_printf       printf
+#define mbedtls_time_t       time_t
+#define MBEDTLS_EXIT_SUCCESS EXIT_SUCCESS
+#define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
 #endif
 
 #if defined(MBEDTLS_AES_C) && defined(MBEDTLS_DHM_C) && \
@@ -237,6 +240,7 @@ int main( void )
     if( ( ret = mbedtls_net_recv( &client_fd, buf, n ) ) != (int) n )
     {
         mbedtls_printf( " failed\n  ! mbedtls_net_recv returned %d\n\n", ret );
+        ret = MBEDTLS_EXIT_FAILURE;
         goto exit;
     }
 
@@ -285,6 +289,8 @@ int main( void )
 
     mbedtls_printf( "\n\n" );
 
+    ret = MBEDTLS_EXIT_SUCCESS;
+
 exit:
 
     mbedtls_net_free( &client_fd );
@@ -301,8 +307,8 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    if( ret != 0 && ret != 1 )
-        ret = 1;
+    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
+        ret = MBEDTLS_EXIT_FAILURE;
 
     return( ret );
 }

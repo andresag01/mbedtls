@@ -29,8 +29,11 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_fprintf    fprintf
-#define mbedtls_printf     printf
+#include <stdlib.h>
+#define mbedtls_fprintf      fprintf
+#define mbedtls_printf       printf
+#define MBEDTLS_EXIT_SUCCESS EXIT_SUCCESS
+#define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
 #endif
 
 #include "mbedtls/aes.h"
@@ -71,7 +74,7 @@ int main( void )
 #else
 int main( int argc, char *argv[] )
 {
-    int ret = 1;
+    int ret = MBEDTLS_EXIT_FAILURE;
 
     unsigned int i, n;
     int mode, lastn;
@@ -105,6 +108,8 @@ int main( int argc, char *argv[] )
     {
         mbedtls_printf( "  ! mbedtls_md_setup() returned -0x%04x\n", -ret );
         goto exit;
+    } else {
+        ret = MBEDTLS_EXIT_FAILURE;
     }
 
     /*
@@ -433,7 +438,7 @@ int main( int argc, char *argv[] )
         }
     }
 
-    ret = 0;
+    ret = MBEDTLS_EXIT_SUCCESS;
 
 exit:
     if( fin )
@@ -447,8 +452,8 @@ exit:
     mbedtls_aes_free( &aes_ctx );
     mbedtls_md_free( &sha_ctx );
 
-    if( ret != 0 && ret != 1)
-        ret = 1;
+    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
+        ret = MBEDTLS_EXIT_FAILURE;
 
     return( ret );
 }

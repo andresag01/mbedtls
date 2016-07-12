@@ -30,8 +30,11 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_fprintf    fprintf
-#define mbedtls_printf     printf
+#include <stdlib.h>
+#define mbedtls_fprintf      fprintf
+#define mbedtls_printf       printf
+#define MBEDTLS_EXIT_SUCCESS EXIT_SUCCESS
+#define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
 #endif
 
 #if defined(MBEDTLS_CIPHER_C) && defined(MBEDTLS_MD_C) && \
@@ -73,8 +76,8 @@ int main( void )
 #else
 int main( int argc, char *argv[] )
 {
-    int ret = 1, i, n;
-    int mode;
+    int ret = MBEDTLS_EXIT_FAILURE, i, n;
+    int mode, lastn;
     size_t keylen, ilen, olen;
     FILE *fkey, *fin = NULL, *fout = NULL;
 
@@ -176,6 +179,8 @@ int main( int argc, char *argv[] )
     {
         mbedtls_fprintf( stderr, "mbedtls_cipher_setup failed\n" );
         goto exit;
+    } else {
+        ret = MBEDTLS_EXIT_FAILURE;
     }
 
     md_info = mbedtls_md_info_from_string( argv[5] );
@@ -532,7 +537,7 @@ int main( int argc, char *argv[] )
         }
     }
 
-    ret = 0;
+    ret = MBEDTLS_EXIT_SUCCESS;
 
 exit:
     if( fin )
@@ -546,8 +551,8 @@ exit:
     mbedtls_cipher_free( &cipher_ctx );
     mbedtls_md_free( &md_ctx );
 
-    if( ret != 0 && ret != 1)
-        ret = 1;
+    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
+        ret = MBEDTLS_EXIT_FAILURE;
 
     return( ret );
 }

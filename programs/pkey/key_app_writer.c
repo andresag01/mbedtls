@@ -29,7 +29,10 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_printf     printf
+#include <stdlib.h>
+#define mbedtls_printf       printf
+#define MBEDTLS_EXIT_SUCCESS EXIT_SUCCESS
+#define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
 #endif
 
 #if defined(MBEDTLS_PK_WRITE_C) && defined(MBEDTLS_FS_IO)
@@ -384,7 +387,7 @@ int main( int argc, char *argv[] )
 
 exit:
 
-    if( ret != 0 && ret != 1)
+    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
     {
 #ifdef MBEDTLS_ERROR_C
         mbedtls_strerror( ret, buf, sizeof( buf ) );
@@ -392,7 +395,7 @@ exit:
 #else
         mbedtls_printf("\n");
 #endif
-        ret = 1;
+        ret = MBEDTLS_EXIT_FAILURE;
     }
 
     mbedtls_pk_free( &key );

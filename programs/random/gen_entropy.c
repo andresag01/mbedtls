@@ -29,8 +29,11 @@
 #include "mbedtls/platform.h"
 #else
 #include <stdio.h>
-#define mbedtls_fprintf    fprintf
-#define mbedtls_printf     printf
+#include <stdlib.h>
+#define mbedtls_fprintf      fprintf
+#define mbedtls_printf       printf
+#define MBEDTLS_EXIT_SUCCESS EXIT_SUCCESS
+#define MBEDTLS_EXIT_FAILURE EXIT_FAILURE
 #endif
 
 #if defined(MBEDTLS_ENTROPY_C) && defined(MBEDTLS_FS_IO)
@@ -91,8 +94,8 @@ cleanup:
     fclose( f );
     mbedtls_entropy_free( &entropy );
 
-    if( ret != 0 && ret != 1 )
-        ret = 1;
+    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
+        ret = MBEDTLS_EXIT_FAILURE;
 
     return( ret );
 }
