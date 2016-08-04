@@ -48,6 +48,11 @@ SHOW_TEST_NUMBER=0
 RUN_TEST_NUMBER=''
 
 PRESERVE_LOGS=0
+CSV_LOG_ENABLED=0
+TEST_SCRIPT="$( readlink -f $0 )"
+
+TEST_REQUIREMENTS=''
+SKIP_REASON=''
 
 print_usage() {
     echo "Usage: $0 [options]"
@@ -59,6 +64,7 @@ print_usage() {
     printf "  -s|--show-numbers\tShow test numbers in front of test names\n"
     printf "  -p|--preserve-logs\tPreserve logs of successful tests as well\n"
     printf "     --seed\tInteger seed value to use for this test run\n"
+    printf "     --csv\tOutput test log to file in csv format\n"
 }
 
 get_options() {
@@ -89,6 +95,11 @@ get_options() {
                 print_usage
                 exit 0
                 ;;
+            --csv)
+                shift; CSV_LOG_ENABLED=1
+                . ./csv-handler.sh
+                csv_handler_init "$1"
+                ;;
             *)
                 echo "Unknown argument: '$1'"
                 print_usage
@@ -99,15 +110,35 @@ get_options() {
     done
 }
 
+# Add a requirement to the test
+add_test_requirement() {
+    if [ -z "$TEST_REQUIREMENTS" ]; then
+        TEST_REQUIREMENTS="$1"
+    else
+        TEST_REQUIREMENTS="$TEST_REQUIREMENTS, $1"
+    fi
+}
+
+add_skip_reason() {
+    if [ -z "$SKIP_REASON" ]; then
+        SKIP_REASON="$1"
+    else
+        SKIP_REASON="$SKIP_REASON, $1"
+    fi
+}
+
 # skip next test if the flag is not enabled in config.h
 requires_config_enabled() {
+    add_test_requirement "Definition of $1"
     if grep "^#define $1" $CONFIG_H > /dev/null; then :; else
+        add_skip_reason "$1 not defined"
         SKIP_NEXT="YES"
     fi
 }
 
 # skip next test if OpenSSL doesn't support FALLBACK_SCSV
 requires_openssl_with_fallback_scsv() {
+    add_test_requirement "OpenSSL support for FALLBACK_SCSV"
     if [ -z "${OPENSSL_HAS_FBSCSV:-}" ]; then
         if $OPENSSL_CMD s_client -help 2>&1 | grep fallback_scsv >/dev/null
         then
@@ -117,12 +148,14 @@ requires_openssl_with_fallback_scsv() {
         fi
     fi
     if [ "$OPENSSL_HAS_FBSCSV" = "NO" ]; then
+        ass_skip_reason "OpenSSL does not support FALLBACK_SCSV"
         SKIP_NEXT="YES"
     fi
 }
 
 # skip next test if GnuTLS isn't available
 requires_gnutls() {
+    add_test_requirement "GnuTLS"
     if [ -z "${GNUTLS_AVAILABLE:-}" ]; then
         if ( which "$GNUTLS_CLI" && which "$GNUTLS_SERV" ) >/dev/null 2>&1; then
             GNUTLS_AVAILABLE="YES"
@@ -131,12 +164,14 @@ requires_gnutls() {
         fi
     fi
     if [ "$GNUTLS_AVAILABLE" = "NO" ]; then
+        add_skip_reason "GnuTLS not available"
         SKIP_NEXT="YES"
     fi
 }
 
 # skip next test if IPv6 isn't available on this host
 requires_ipv6() {
+    add_test_requirement "IPV6"
     if [ -z "${HAS_IPV6:-}" ]; then
         $P_SRV server_addr='::1' > $SRV_OUT 2>&1 &
         SRV_PID=$!
@@ -151,20 +186,25 @@ requires_ipv6() {
     fi
 
     if [ "$HAS_IPV6" = "NO" ]; then
+        add_skip_reason "IPV6 not available"
         SKIP_NEXT="YES"
     fi
 }
 
 # skip the next test if valgrind is in use
 not_with_valgrind() {
+    add_test_requirement "valgrind"
     if [ "$MEMCHECK" -gt 0 ]; then
+        add_skip_reason "valgrind already in use"
         SKIP_NEXT="YES"
     fi
 }
 
 # skip the next test if valgrind is NOT in use
 only_with_valgrind() {
+    add_test_requirement "valgrind in use"
     if [ "$MEMCHECK" -eq 0 ]; then
+        add_skip_reason "valgrind NOT in use"
         SKIP_NEXT="YES"
     fi
 }
@@ -205,6 +245,9 @@ fail() {
     mv $CLI_OUT o-cli-${TESTS}.log
     if [ -n "$PXY_CMD" ]; then
         mv $PXY_OUT o-pxy-${TESTS}.log
+        csv_log_test "$TESTS" "$NAME" "" "FAIL" "$1" "o-srv-${TESTS}.log,o-cli-${TESTS}.log,o-pxy-${TESTS}.log"
+    else
+        csv_log_test "$TESTS" "$NAME" "" "FAIL" "$1" "o-srv-${TESTS}.log,o-cli-${TESTS}.log"
     fi
     echo "  ! outputs saved to o-XXX-${TESTS}.log"
 
@@ -330,6 +373,13 @@ detect_dtls() {
     fi
 }
 
+# Log a test to the csv file
+csv_log_test() {
+    if [ $CSV_LOG_ENABLED -ne 0 ]; then
+        csv_handler_add_record "$@" "$TEST_SCRIPT"
+    fi
+}
+
 # Usage: run_test name [-p proxy_cmd] srv_cmd cli_cmd cli_exit [option [...]]
 # Options:  -s pattern  pattern that must be present in server output
 #           -c pattern  pattern that must be present in client output
@@ -351,6 +401,7 @@ run_test() {
     if [ "X$RUN_TEST_NUMBER" = "X" ]; then :
     elif echo ",$RUN_TEST_NUMBER," | grep ",$TESTS," >/dev/null; then :
     else
+        add_skip_reason "Disabled by command line arguments"
         SKIP_NEXT="YES"
     fi
 
@@ -358,9 +409,16 @@ run_test() {
     if [ "X$SKIP_NEXT" = "XYES" ]; then
         SKIP_NEXT="NO"
         echo "SKIP"
+        csv_log_test "$TESTS" "$NAME" "$TEST_REQUIREMENTS" "SKIP" "$SKIP_REASON" ""
         SKIPS=$(( $SKIPS + 1 ))
+
+        TEST_REQUIREMENTS=""
+        SKIP_REASON=""
         return
     fi
+
+    TEST_REQUIREMENTS=""
+    SKIP_REASON=""
 
     # does this test use a proxy?
     if [ "X$1" = "X-p" ]; then
@@ -525,6 +583,8 @@ run_test() {
     if [ "$PRESERVE_LOGS" -gt 0 ]; then
         mv $SRV_OUT o-srv-${TESTS}.log
         mv $CLI_OUT o-cli-${TESTS}.log
+    else
+        csv_log_test "$TESTS" "$NAME" "" "PASS" "" "o-srv-${TESTS}.log,o-cli-${TESTS}.log"
     fi
 
     rm -f $SRV_OUT $CLI_OUT $PXY_OUT

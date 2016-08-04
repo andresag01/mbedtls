@@ -57,6 +57,8 @@ EXCLUDE='NULL\|DES-CBC-\|RC4\|ARCFOUR' # avoid plain DES but keep 3DES-EDE-CBC (
 VERBOSE=""
 MEMCHECK=0
 PEERS="OpenSSL$PEER_GNUTLS mbedTLS"
+CSV_LOG_ENABLED=0
+TEST_SCRIPT="$( readlink -f $0 )"
 
 # hidden option: skip DTLS with OpenSSL
 # (travis CI has a version that doesn't work for us)
@@ -74,6 +76,7 @@ print_usage() {
     printf "            \tAlso available: GnuTLS (needs v3.2.15 or higher)\n"
     printf "  -M|--memcheck\tCheck memory leaks and errors.\n"
     printf "  -v|--verbose\tSet verbose output.\n"
+    printf "  --csv\tOutput test log to file in csv format.\n"
 }
 
 get_options() {
@@ -106,6 +109,11 @@ get_options() {
             -h|--help)
                 print_usage
                 exit 0
+                ;;
+            --csv)
+                shift; CSV_LOG_ENABLED=1
+                . ./csv-handler.sh
+                csv_handler_init "$1"
                 ;;
             *)
                 echo "Unknown argument: '$1'"
@@ -929,6 +937,13 @@ wait_client_done() {
     echo "EXIT: $EXIT" >> $CLI_OUT
 }
 
+# Log a test to the csv file
+csv_log_test() {
+    if [ $CSV_LOG_ENABLED -ne 0 ]; then
+        csv_handler_add_record "$@" "$TEST_SCRIPT"
+    fi
+}
+
 # run_client <name> <cipher>
 run_client() {
     # announce what we're going to do
@@ -1038,13 +1053,16 @@ run_client() {
     case $RESULT in
         "0")
             echo PASS
+            csv_log_test "$TESTS" "$TITLE" "" "PASS" "" ""
             ;;
         "1")
             echo SKIP
+            csv_log_test "$TESTS" "$TITLE" "" "SKIP" "" ""
             SKIPPED=$(( $SKIPPED + 1 ))
             ;;
         "2")
             echo FAIL
+            csv_log_test "$TESTS" "$TITLE" "" "FAIL" "" "c-srv-${TESTS}.log,c-cli-${TESTS}.log"
             cp $SRV_OUT c-srv-${TESTS}.log
             cp $CLI_OUT c-cli-${TESTS}.log
             echo "  ! outputs saved to c-srv-${TESTS}.log, c-cli-${TESTS}.log"
