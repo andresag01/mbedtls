@@ -560,48 +560,48 @@
 
 #if defined(__thumb__) && !defined(__thumb2__)
 
-#define MULADDC_INIT                                    \
-    asm(                                                \
-            "ldr    r0, %3                      \n\t"   \
-            "ldr    r1, %4                      \n\t"   \
-            "ldr    r2, %5                      \n\t"   \
-            "ldr    r3, %6                      \n\t"   \
-            "lsr    r7, r3, #16                 \n\t"   \
-            "mov    r9, r7                      \n\t"   \
-            "lsl    r7, r3, #16                 \n\t"   \
-            "lsr    r7, r7, #16                 \n\t"   \
-            "mov    r8, r7                      \n\t"
+#define MULADDC_INIT                                     \
+    asm(                                                 \
+            "ldr    r0,  %3                      \n\t"   \
+            "ldr    r1,  %4                      \n\t"   \
+            "ldr    r10, %5                      \n\t"   \
+            "ldr    r3,  %6                      \n\t"   \
+            "lsr    r4,  r3, #16                 \n\t"   \
+            "mov    r9,  r4                      \n\t"   \
+            "lsl    r4,  r3, #16                 \n\t"   \
+            "lsr    r4,  r4, #16                 \n\t"   \
+            "mov    r8,  r4                      \n\t"
 
-#define MULADDC_CORE                                    \
-            "ldmia  r0!, {r6}                   \n\t"   \
-            "lsr    r7, r6, #16                 \n\t"   \
-            "lsl    r6, r6, #16                 \n\t"   \
-            "lsr    r6, r6, #16                 \n\t"   \
-            "mov    r4, r8                      \n\t"   \
-            "mul    r4, r6                      \n\t"   \
-            "mov    r3, r9                      \n\t"   \
-            "mul    r6, r3                      \n\t"   \
-            "mov    r5, r9                      \n\t"   \
-            "mul    r5, r7                      \n\t"   \
-            "mov    r3, r8                      \n\t"   \
-            "mul    r7, r3                      \n\t"   \
-            "lsr    r3, r6, #16                 \n\t"   \
-            "add    r5, r5, r3                  \n\t"   \
-            "lsr    r3, r7, #16                 \n\t"   \
-            "add    r5, r5, r3                  \n\t"   \
-            "add    r4, r4, r2                  \n\t"   \
-            "mov    r2, #0                      \n\t"   \
-            "adc    r5, r2                      \n\t"   \
-            "lsl    r3, r6, #16                 \n\t"   \
-            "add    r4, r4, r3                  \n\t"   \
-            "adc    r5, r2                      \n\t"   \
-            "lsl    r3, r7, #16                 \n\t"   \
-            "add    r4, r4, r3                  \n\t"   \
-            "adc    r5, r2                      \n\t"   \
-            "ldr    r3, [r1]                    \n\t"   \
-            "add    r4, r4, r3                  \n\t"   \
-            "adc    r2, r5                      \n\t"   \
-            "stmia  r1!, {r4}                   \n\t"
+#define MULADDC_CORE                                     \
+            "ldmia  r0!, {r6}                    \n\t"   \
+            "lsr    r2,  r6, #16                 \n\t"   \
+            "lsl    r6,  r6, #16                 \n\t"   \
+            "lsr    r6,  r6, #16                 \n\t"   \
+            "mov    r4,  r8                      \n\t"   \
+            "mul    r4,  r6                      \n\t"   \
+            "mov    r3,  r9                      \n\t"   \
+            "mul    r6,  r3                      \n\t"   \
+            "mov    r5,  r9                      \n\t"   \
+            "mul    r5,  r2                      \n\t"   \
+            "mov    r3,  r8                      \n\t"   \
+            "mul    r2,  r3                      \n\t"   \
+            "lsr    r3,  r6, #16                 \n\t"   \
+            "add    r5,  r5, r3                  \n\t"   \
+            "lsr    r3,  r2, #16                 \n\t"   \
+            "add    r5,  r5, r3                  \n\t"   \
+            "add    r4,  r4, r10                 \n\t"   \
+            "mov    r10, #0                      \n\t"   \
+            "adc    r5,  r10                     \n\t"   \
+            "lsl    r3,  r6, #16                 \n\t"   \
+            "add    r4,  r4, r3                  \n\t"   \
+            "adc    r5,  r10                     \n\t"   \
+            "lsl    r3,  r2, #16                 \n\t"   \
+            "add    r4,  r4, r3                  \n\t"   \
+            "adc    r5,  r10                     \n\t"   \
+            "ldr    r3,  [r1]                    \n\t"   \
+            "add    r4,  r4, r3                  \n\t"   \
+            "adc    r10, r5                      \n\t"   \
+            "stmia  r1!, {r4}                    \n\t"
 
 #define MULADDC_STOP                                    \
             "str    r2, %0                      \n\t"   \
@@ -610,7 +610,7 @@
          : "=m" (c),  "=m" (d), "=m" (s)        \
          : "m" (s), "m" (d), "m" (c), "m" (b)   \
          : "r0", "r1", "r2", "r3", "r4", "r5",  \
-           "r6", "r7", "r8", "r9", "cc"         \
+           "r6", "r8", "r9", "r10", "cc"        \
          );
 
 #else
