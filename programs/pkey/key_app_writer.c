@@ -192,7 +192,8 @@ static int write_private_key( mbedtls_pk_context *key, const char *output_file )
 
 int main( int argc, char *argv[] )
 {
-    int ret = 0;
+    int retval = 1;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
     mbedtls_pk_context key;
     char buf[1024];
     int i;
@@ -207,7 +208,6 @@ int main( int argc, char *argv[] )
     if( argc == 0 )
     {
     usage:
-        ret = 1;
         mbedtls_printf( USAGE );
         goto exit;
     }
@@ -283,12 +283,12 @@ int main( int argc, char *argv[] )
         mbedtls_printf( "\n  . Loading the private key ..." );
         fflush( stdout );
 
-        ret = mbedtls_pk_parse_keyfile( &key, opt.filename, NULL );
+        retval = mbedtls_pk_parse_keyfile( &key, opt.filename, NULL );
 
-        if( ret != 0 )
+        if( retval != 0 )
         {
-            mbedtls_strerror( ret, (char *) buf, sizeof(buf) );
-            mbedtls_printf( " failed\n  !  mbedtls_pk_parse_keyfile returned -0x%04x - %s\n\n", -ret, buf );
+            mbedtls_strerror( retval, (char *) buf, sizeof(buf) );
+            mbedtls_printf( " failed\n  !  mbedtls_pk_parse_keyfile returned -0x%04x - %s\n\n", -retval, buf );
             goto exit;
         }
 
@@ -336,12 +336,12 @@ int main( int argc, char *argv[] )
         mbedtls_printf( "\n  . Loading the public key ..." );
         fflush( stdout );
 
-        ret = mbedtls_pk_parse_public_keyfile( &key, opt.filename );
+        retval = mbedtls_pk_parse_public_keyfile( &key, opt.filename );
 
-        if( ret != 0 )
+        if( retval != 0 )
         {
-            mbedtls_strerror( ret, (char *) buf, sizeof(buf) );
-            mbedtls_printf( " failed\n  !  mbedtls_pk_parse_public_key returned -0x%04x - %s\n\n", -ret, buf );
+            mbedtls_strerror( retval, (char *) buf, sizeof(buf) );
+            mbedtls_printf( " failed\n  !  mbedtls_pk_parse_public_key returned -0x%04x - %s\n\n", -retval, buf );
             goto exit;
         }
 
@@ -387,15 +387,14 @@ int main( int argc, char *argv[] )
 
 exit:
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
+    if( exitcode != MBEDTLS_EXIT_SUCCESS )
     {
 #ifdef MBEDTLS_ERROR_C
-        mbedtls_strerror( ret, buf, sizeof( buf ) );
+        mbedtls_strerror( retval, buf, sizeof( buf ) );
         mbedtls_printf( " - %s\n", buf );
 #else
         mbedtls_printf("\n");
 #endif
-        ret = MBEDTLS_EXIT_FAILURE;
     }
 
     mbedtls_pk_free( &key );
@@ -405,6 +404,6 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_PK_WRITE_C && MBEDTLS_FS_IO */

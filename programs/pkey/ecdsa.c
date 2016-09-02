@@ -100,7 +100,8 @@ static void dump_pubkey( const char *title, mbedtls_ecdsa_context *key )
 
 int main( int argc, char *argv[] )
 {
-    int ret;
+    int retval = 1;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
     mbedtls_ecdsa_context ctx_sign, ctx_verify;
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -115,7 +116,6 @@ int main( int argc, char *argv[] )
     mbedtls_ctr_drbg_init( &ctr_drbg );
 
     memset(sig, 0, sizeof( sig ) );
-    ret = 1;
 
     if( argc != 1 )
     {
@@ -135,21 +135,21 @@ int main( int argc, char *argv[] )
     fflush( stdout );
 
     mbedtls_entropy_init( &entropy );
-    if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
+    if( ( retval = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
                                (const unsigned char *) pers,
                                strlen( pers ) ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", retval );
         goto exit;
     }
 
     mbedtls_printf( " ok\n  . Generating key pair..." );
     fflush( stdout );
 
-    if( ( ret = mbedtls_ecdsa_genkey( &ctx_sign, ECPARAMS,
+    if( ( retval = mbedtls_ecdsa_genkey( &ctx_sign, ECPARAMS,
                               mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ecdsa_genkey returned %d\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_ecdsa_genkey returned %d\n", retval );
         goto exit;
     }
 
@@ -163,12 +163,12 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "  . Signing message..." );
     fflush( stdout );
 
-    if( ( ret = mbedtls_ecdsa_write_signature( &ctx_sign, MBEDTLS_MD_SHA256,
+    if( ( retval = mbedtls_ecdsa_write_signature( &ctx_sign, MBEDTLS_MD_SHA256,
                                        hash, sizeof( hash ),
                                        sig, &sig_len,
                                        mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ecdsa_genkey returned %d\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_ecdsa_genkey returned %d\n", retval );
         goto exit;
     }
     mbedtls_printf( " ok (signature length = %u)\n", (unsigned int) sig_len );
@@ -186,19 +186,17 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "  . Preparing verification context..." );
     fflush( stdout );
 
-    if( ( ret = mbedtls_ecp_group_copy( &ctx_verify.grp, &ctx_sign.grp ) ) != 0 )
+    if( ( retval = mbedtls_ecp_group_copy( &ctx_verify.grp, &ctx_sign.grp ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ecp_group_copy returned %d\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_ecp_group_copy returned %d\n", retval );
         goto exit;
     }
 
-    if( ( ret = mbedtls_ecp_copy( &ctx_verify.Q, &ctx_sign.Q ) ) != 0 )
+    if( ( retval = mbedtls_ecp_copy( &ctx_verify.Q, &ctx_sign.Q ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ecp_copy returned %d\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_ecp_copy returned %d\n", retval );
         goto exit;
     }
-
-    ret = 0;
 
     /*
      * Verify signature
@@ -206,15 +204,17 @@ int main( int argc, char *argv[] )
     mbedtls_printf( " ok\n  . Verifying signature..." );
     fflush( stdout );
 
-    if( ( ret = mbedtls_ecdsa_read_signature( &ctx_verify,
+    if( ( retval = mbedtls_ecdsa_read_signature( &ctx_verify,
                                       hash, sizeof( hash ),
                                       sig, sig_len ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ecdsa_read_signature returned %d\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_ecdsa_read_signature returned %d\n", retval );
         goto exit;
     }
 
     mbedtls_printf( " ok\n" );
+
+    exitcode = MBEDTLS_EXIT_SUCCESS;
 
 exit:
 
@@ -228,10 +228,7 @@ exit:
     mbedtls_ctr_drbg_free( &ctr_drbg );
     mbedtls_entropy_free( &entropy );
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_ECDSA_C && MBEDTLS_ENTROPY_C && MBEDTLS_CTR_DRBG_C &&
           ECPARAMS */

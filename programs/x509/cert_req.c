@@ -136,7 +136,8 @@ int write_certificate_request( mbedtls_x509write_csr *req, const char *output_fi
 
 int main( int argc, char *argv[] )
 {
-    int ret = 0;
+    int retval = 1;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
     mbedtls_pk_context key;
     char buf[1024];
     int i;
@@ -159,7 +160,6 @@ int main( int argc, char *argv[] )
     {
     usage:
         mbedtls_printf( USAGE );
-        ret = 1;
         goto exit;
     }
 
@@ -263,11 +263,11 @@ int main( int argc, char *argv[] )
     fflush( stdout );
 
     mbedtls_entropy_init( &entropy );
-    if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
+    if( ( retval = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
                                (const unsigned char *) pers,
                                strlen( pers ) ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  !  mbedtls_ctr_drbg_seed returned %d", ret );
+        mbedtls_printf( " failed\n  !  mbedtls_ctr_drbg_seed returned %d", retval );
         goto exit;
     }
 
@@ -279,9 +279,9 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "  . Checking subject name..." );
     fflush( stdout );
 
-    if( ( ret = mbedtls_x509write_csr_set_subject_name( &req, opt.subject_name ) ) != 0 )
+    if( ( retval = mbedtls_x509write_csr_set_subject_name( &req, opt.subject_name ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  !  mbedtls_x509write_csr_set_subject_name returned %d", ret );
+        mbedtls_printf( " failed\n  !  mbedtls_x509write_csr_set_subject_name returned %d", retval );
         goto exit;
     }
 
@@ -293,11 +293,11 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "  . Loading the private key ..." );
     fflush( stdout );
 
-    ret = mbedtls_pk_parse_keyfile( &key, opt.filename, NULL );
+    retval = mbedtls_pk_parse_keyfile( &key, opt.filename, NULL );
 
-    if( ret != 0 )
+    if( retval != 0 )
     {
-        mbedtls_printf( " failed\n  !  mbedtls_pk_parse_keyfile returned %d", ret );
+        mbedtls_printf( " failed\n  !  mbedtls_pk_parse_keyfile returned %d", retval );
         goto exit;
     }
 
@@ -311,21 +311,23 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "  . Writing the certificate request ..." );
     fflush( stdout );
 
-    if( ( ret = write_certificate_request( &req, opt.output_file,
+    if( ( retval = write_certificate_request( &req, opt.output_file,
                                            mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  !  write_certifcate_request %d", ret );
+        mbedtls_printf( " failed\n  !  write_certifcate_request %d", retval );
         goto exit;
     }
 
     mbedtls_printf( " ok\n" );
 
+    exitcode = MBEDTLS_EXIT_SUCCESS;
+
 exit:
 
-    if( ret != 0 && ret != 1)
+    if( exitcode != MBEDTLS_EXIT_SUCCESS )
     {
 #ifdef MBEDTLS_ERROR_C
-        mbedtls_strerror( ret, buf, sizeof( buf ) );
+        mbedtls_strerror( retval, buf, sizeof( buf ) );
         mbedtls_printf( " - %s\n", buf );
 #else
         mbedtls_printf("\n");
@@ -342,10 +344,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_X509_CSR_WRITE_C && MBEDTLS_PK_PARSE_C && MBEDTLS_FS_IO &&
           MBEDTLS_ENTROPY_C && MBEDTLS_CTR_DRBG_C && MBEDTLS_PEM_WRITE_C */

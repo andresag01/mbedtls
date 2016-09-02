@@ -58,7 +58,8 @@ int main( void )
 int main( int argc, char *argv[] )
 {
     FILE *f;
-    int ret;
+    int retval = 1;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
     size_t i;
     mbedtls_rsa_context rsa;
     unsigned char hash[32];
@@ -66,7 +67,6 @@ int main( int argc, char *argv[] )
     char filename[512];
 
     mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, 0 );
-    ret = 1;
 
     if( argc != 2 )
     {
@@ -84,22 +84,21 @@ int main( int argc, char *argv[] )
 
     if( ( f = fopen( "rsa_priv.txt", "rb" ) ) == NULL )
     {
-        ret = 1;
         mbedtls_printf( " failed\n  ! Could not open rsa_priv.txt\n" \
                 "  ! Please run rsa_genkey first\n\n" );
         goto exit;
     }
 
-    if( ( ret = mbedtls_mpi_read_file( &rsa.N , 16, f ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_file( &rsa.E , 16, f ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_file( &rsa.D , 16, f ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_file( &rsa.P , 16, f ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_file( &rsa.Q , 16, f ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_file( &rsa.DP, 16, f ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_file( &rsa.DQ, 16, f ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_file( &rsa.QP, 16, f ) ) != 0 )
+    if( ( retval = mbedtls_mpi_read_file( &rsa.N , 16, f ) ) != 0 ||
+        ( retval = mbedtls_mpi_read_file( &rsa.E , 16, f ) ) != 0 ||
+        ( retval = mbedtls_mpi_read_file( &rsa.D , 16, f ) ) != 0 ||
+        ( retval = mbedtls_mpi_read_file( &rsa.P , 16, f ) ) != 0 ||
+        ( retval = mbedtls_mpi_read_file( &rsa.Q , 16, f ) ) != 0 ||
+        ( retval = mbedtls_mpi_read_file( &rsa.DP, 16, f ) ) != 0 ||
+        ( retval = mbedtls_mpi_read_file( &rsa.DQ, 16, f ) ) != 0 ||
+        ( retval = mbedtls_mpi_read_file( &rsa.QP, 16, f ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_mpi_read_file returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_mpi_read_file returned %d\n\n", retval );
         fclose( f );
         goto exit;
     }
@@ -110,9 +109,9 @@ int main( int argc, char *argv[] )
 
     mbedtls_printf( "\n  . Checking the private key" );
     fflush( stdout );
-    if( ( ret = mbedtls_rsa_check_privkey( &rsa ) ) != 0 )
+    if( ( retval = mbedtls_rsa_check_privkey( &rsa ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_rsa_check_privkey failed with -0x%0x\n", -ret );
+        mbedtls_printf( " failed\n  ! mbedtls_rsa_check_privkey failed with -0x%0x\n", -retval );
         goto exit;
     }
 
@@ -123,18 +122,17 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "\n  . Generating the RSA/SHA-256 signature" );
     fflush( stdout );
 
-    if( ( ret = mbedtls_md_file(
-                    mbedtls_md_info_from_type( MBEDTLS_MD_SHA256 ),
-                    argv[1], hash ) ) != 0 )
+    if( mbedtls_md_file( mbedtls_md_info_from_type( MBEDTLS_MD_SHA256 ),
+                    argv[1], hash ) != 0 )
     {
         mbedtls_printf( " failed\n  ! Could not open or read %s\n\n", argv[1] );
         goto exit;
     }
 
-    if( ( ret = mbedtls_rsa_pkcs1_sign( &rsa, NULL, NULL, MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA256,
+    if( ( retval = mbedtls_rsa_pkcs1_sign( &rsa, NULL, NULL, MBEDTLS_RSA_PRIVATE, MBEDTLS_MD_SHA256,
                                 20, hash, buf ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_rsa_pkcs1_sign returned -0x%0x\n\n", -ret );
+        mbedtls_printf( " failed\n  ! mbedtls_rsa_pkcs1_sign returned -0x%0x\n\n", -retval );
         goto exit;
     }
 
@@ -145,7 +143,6 @@ int main( int argc, char *argv[] )
 
     if( ( f = fopen( filename, "wb+" ) ) == NULL )
     {
-        ret = 1;
         mbedtls_printf( " failed\n  ! Could not create %s\n\n", argv[1] );
         goto exit;
     }
@@ -158,6 +155,8 @@ int main( int argc, char *argv[] )
 
     mbedtls_printf( "\n  . Done (created \"%s\")\n\n", filename );
 
+    exitcode = MBEDTLS_EXIT_SUCCESS;
+
 exit:
 
     mbedtls_rsa_free( &rsa );
@@ -167,10 +166,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_RSA_C && MBEDTLS_SHA256_C &&
           MBEDTLS_FS_IO */

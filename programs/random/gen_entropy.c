@@ -52,28 +52,29 @@ int main( void )
 int main( int argc, char *argv[] )
 {
     FILE *f;
-    int i, k, ret;
+    int i, k, retval = 1;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
     mbedtls_entropy_context entropy;
     unsigned char buf[MBEDTLS_ENTROPY_BLOCK_SIZE];
 
     if( argc < 2 )
     {
         mbedtls_fprintf( stderr, "usage: %s <output filename>\n", argv[0] );
-        return( 1 );
+        return( exitcode );
     }
 
     if( ( f = fopen( argv[1], "wb+" ) ) == NULL )
     {
         mbedtls_printf( "failed to open '%s' for writing.\n", argv[1] );
-        return( 1 );
+        return( exitcode );
     }
 
     mbedtls_entropy_init( &entropy );
 
     for( i = 0, k = 768; i < k; i++ )
     {
-        ret = mbedtls_entropy_func( &entropy, buf, sizeof( buf ) );
-        if( ret != 0 )
+        retval = mbedtls_entropy_func( &entropy, buf, sizeof( buf ) );
+        if( retval != 0 )
         {
             mbedtls_printf("failed!\n");
             goto cleanup;
@@ -86,7 +87,7 @@ int main( int argc, char *argv[] )
         fflush( stdout );
     }
 
-    ret = 0;
+    exitcode = MBEDTLS_EXIT_SUCCESS;
 
 cleanup:
     mbedtls_printf( "\n" );
@@ -94,9 +95,6 @@ cleanup:
     fclose( f );
     mbedtls_entropy_free( &entropy );
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_ENTROPY_C */

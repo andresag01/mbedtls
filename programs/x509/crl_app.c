@@ -70,7 +70,8 @@ struct options
 
 int main( int argc, char *argv[] )
 {
-    int ret = 0;
+    int retval = 1;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
     unsigned char buf[100000];
     mbedtls_x509_crl crl;
     int i;
@@ -109,11 +110,11 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "\n  . Loading the CRL ..." );
     fflush( stdout );
 
-    ret = mbedtls_x509_crl_parse_file( &crl, opt.filename );
+    retval = mbedtls_x509_crl_parse_file( &crl, opt.filename );
 
-    if( ret != 0 )
+    if( retval != 0 )
     {
-        mbedtls_printf( " failed\n  !  mbedtls_x509_crl_parse_file returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  !  mbedtls_x509_crl_parse_file returned %d\n\n", retval );
         mbedtls_x509_crl_free( &crl );
         goto exit;
     }
@@ -124,15 +125,17 @@ int main( int argc, char *argv[] )
      * 1.2 Print the CRL
      */
     mbedtls_printf( "  . CRL information    ...\n" );
-    ret = mbedtls_x509_crl_info( (char *) buf, sizeof( buf ) - 1, "      ", &crl );
-    if( ret == -1 )
+    retval = mbedtls_x509_crl_info( (char *) buf, sizeof( buf ) - 1, "      ", &crl );
+    if( retval == -1 )
     {
-        mbedtls_printf( " failed\n  !  mbedtls_x509_crl_info returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  !  mbedtls_x509_crl_info returned %d\n\n", retval );
         mbedtls_x509_crl_free( &crl );
         goto exit;
     }
 
     mbedtls_printf( "%s\n", buf );
+
+    exitcode = MBEDTLS_EXIT_SUCCESS;
 
 exit:
     mbedtls_x509_crl_free( &crl );
@@ -142,10 +145,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_RSA_C && MBEDTLS_X509_CRL_PARSE_C &&
           MBEDTLS_FS_IO */

@@ -86,7 +86,8 @@ struct options
 
 int main( int argc, char *argv[] )
 {
-    int ret = 0;
+    int retval = 1;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
     mbedtls_pk_context pk;
     char buf[1024];
     int i;
@@ -174,11 +175,11 @@ int main( int argc, char *argv[] )
         mbedtls_printf( "\n  . Loading the private key ..." );
         fflush( stdout );
 
-        ret = mbedtls_pk_parse_keyfile( &pk, opt.filename, opt.password );
+        retval = mbedtls_pk_parse_keyfile( &pk, opt.filename, opt.password );
 
-        if( ret != 0 )
+        if( retval != 0 )
         {
-            mbedtls_printf( " failed\n  !  mbedtls_pk_parse_keyfile returned -0x%04x\n", -ret );
+            mbedtls_printf( " failed\n  !  mbedtls_pk_parse_keyfile returned -0x%04x\n", -retval );
             goto exit;
         }
 
@@ -227,11 +228,11 @@ int main( int argc, char *argv[] )
         mbedtls_printf( "\n  . Loading the public key ..." );
         fflush( stdout );
 
-        ret = mbedtls_pk_parse_public_keyfile( &pk, opt.filename );
+        retval = mbedtls_pk_parse_public_keyfile( &pk, opt.filename );
 
-        if( ret != 0 )
+        if( retval != 0 )
         {
-            mbedtls_printf( " failed\n  !  mbedtls_pk_parse_public_keyfile returned -0x%04x\n", -ret );
+            mbedtls_printf( " failed\n  !  mbedtls_pk_parse_public_keyfile returned -0x%04x\n", -retval );
             goto exit;
         }
 
@@ -265,12 +266,17 @@ int main( int argc, char *argv[] )
     else
         goto usage;
 
+    exitcode = MBEDTLS_EXIT_SUCCESS;
+
 exit:
 
+    if( exitcode != MBEDTLS_EXIT_SUCCESS )
+    {
 #if defined(MBEDTLS_ERROR_C)
-    mbedtls_strerror( ret, buf, sizeof(buf) );
-    mbedtls_printf( "  !  Last error was: %s\n", buf );
+        mbedtls_strerror( retval, buf, sizeof(buf) );
+        mbedtls_printf( "  !  Last error was: %s\n", buf );
 #endif
+    }
 
     mbedtls_pk_free( &pk );
 
@@ -279,9 +285,6 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_PK_PARSE_C && MBEDTLS_FS_IO */

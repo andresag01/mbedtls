@@ -63,7 +63,8 @@ int main( void )
 int main( int argc, char *argv[] )
 {
     FILE *f;
-    int ret = 1;
+    int retval = 1;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
     mbedtls_pk_context pk;
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -91,28 +92,26 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "\n  . Seeding the random number generator..." );
     fflush( stdout );
 
-    if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
+    if( ( retval = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
                                (const unsigned char *) pers,
                                strlen( pers ) ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", retval );
         goto exit;
     }
 
     mbedtls_printf( "\n  . Reading private key from '%s'", argv[1] );
     fflush( stdout );
 
-    if( ( ret = mbedtls_pk_parse_keyfile( &pk, argv[1], "" ) ) != 0 )
+    if( ( retval = mbedtls_pk_parse_keyfile( &pk, argv[1], "" ) ) != 0 )
     {
-        ret = 1;
         mbedtls_printf( " failed\n  ! Could not read key from '%s'\n", argv[1] );
-        mbedtls_printf( "  ! mbedtls_pk_parse_public_keyfile returned %d\n\n", ret );
+        mbedtls_printf( "  ! mbedtls_pk_parse_public_keyfile returned %d\n\n", retval );
         goto exit;
     }
 
     if( !mbedtls_pk_can_do( &pk, MBEDTLS_PK_RSA ) )
     {
-        ret = 1;
         mbedtls_printf( " failed\n  ! Key is not an RSA key\n" );
         goto exit;
     }
@@ -126,18 +125,17 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "\n  . Generating the RSA/SHA-256 signature" );
     fflush( stdout );
 
-    if( ( ret = mbedtls_md_file(
-                    mbedtls_md_info_from_type( MBEDTLS_MD_SHA256 ),
-                    argv[2], hash ) ) != 0 )
+    if( mbedtls_md_file( mbedtls_md_info_from_type( MBEDTLS_MD_SHA256 ),
+                argv[2], hash ) != 0 )
     {
         mbedtls_printf( " failed\n  ! Could not open or read %s\n\n", argv[2] );
         goto exit;
     }
 
-    if( ( ret = mbedtls_pk_sign( &pk, MBEDTLS_MD_SHA256, hash, 0, buf, &olen,
+    if( ( retval = mbedtls_pk_sign( &pk, MBEDTLS_MD_SHA256, hash, 0, buf, &olen,
                          mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_pk_sign returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_pk_sign returned %d\n\n", retval );
         goto exit;
     }
 
@@ -148,7 +146,6 @@ int main( int argc, char *argv[] )
 
     if( ( f = fopen( filename, "wb+" ) ) == NULL )
     {
-        ret = 1;
         mbedtls_printf( " failed\n  ! Could not create %s\n\n", filename );
         goto exit;
     }
@@ -164,6 +161,8 @@ int main( int argc, char *argv[] )
 
     mbedtls_printf( "\n  . Done (created \"%s\")\n\n", filename );
 
+    exitcode = MBEDTLS_EXIT_SUCCESS;
+
 exit:
     mbedtls_pk_free( &pk );
     mbedtls_ctr_drbg_free( &ctr_drbg );
@@ -174,10 +173,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_ENTROPY_C && MBEDTLS_RSA_C &&
           MBEDTLS_SHA256_C && MBEDTLS_PK_PARSE_C && MBEDTLS_FS_IO &&

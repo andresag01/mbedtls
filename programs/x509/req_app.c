@@ -70,7 +70,8 @@ struct options
 
 int main( int argc, char *argv[] )
 {
-    int ret = 0;
+    int retval = 1;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
     unsigned char buf[100000];
     mbedtls_x509_csr csr;
     int i;
@@ -109,11 +110,11 @@ int main( int argc, char *argv[] )
     mbedtls_printf( "\n  . Loading the CSR ..." );
     fflush( stdout );
 
-    ret = mbedtls_x509_csr_parse_file( &csr, opt.filename );
+    retval = mbedtls_x509_csr_parse_file( &csr, opt.filename );
 
-    if( ret != 0 )
+    if( retval != 0 )
     {
-        mbedtls_printf( " failed\n  !  mbedtls_x509_csr_parse_file returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  !  mbedtls_x509_csr_parse_file returned %d\n\n", retval );
         mbedtls_x509_csr_free( &csr );
         goto exit;
     }
@@ -124,15 +125,17 @@ int main( int argc, char *argv[] )
      * 1.2 Print the CSR
      */
     mbedtls_printf( "  . CSR information    ...\n" );
-    ret = mbedtls_x509_csr_info( (char *) buf, sizeof( buf ) - 1, "      ", &csr );
-    if( ret == -1 )
+    retval = mbedtls_x509_csr_info( (char *) buf, sizeof( buf ) - 1, "      ", &csr );
+    if( retval == -1 )
     {
-        mbedtls_printf( " failed\n  !  mbedtls_x509_csr_info returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  !  mbedtls_x509_csr_info returned %d\n\n", retval );
         mbedtls_x509_csr_free( &csr );
         goto exit;
     }
 
     mbedtls_printf( "%s\n", buf );
+
+    exitcode = MBEDTLS_EXIT_SUCCESS;
 
 exit:
     mbedtls_x509_csr_free( &csr );
@@ -142,10 +145,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_RSA_C && MBEDTLS_X509_CSR_PARSE_C &&
           MBEDTLS_FS_IO */

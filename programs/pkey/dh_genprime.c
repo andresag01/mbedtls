@@ -70,7 +70,8 @@ int main( void )
 
 int main( int argc, char **argv )
 {
-    int ret = 1;
+    int retval = 1;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
     mbedtls_mpi G, P, Q;
     mbedtls_entropy_context entropy;
     mbedtls_ctr_drbg_context ctr_drbg;
@@ -88,7 +89,7 @@ int main( int argc, char **argv )
     {
     usage:
         mbedtls_printf( USAGE );
-        return( 1 );
+        return( exitcode );
     }
 
     for( i = 1; i < argc; i++ )
@@ -108,9 +109,9 @@ int main( int argc, char **argv )
             goto usage;
     }
 
-    if( ( ret = mbedtls_mpi_read_string( &G, 10, GENERATOR ) ) != 0 )
+    if( ( retval = mbedtls_mpi_read_string( &G, 10, GENERATOR ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_mpi_read_string returned %d\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_mpi_read_string returned %d\n", retval );
         goto exit;
     }
 
@@ -119,11 +120,11 @@ int main( int argc, char **argv )
     mbedtls_printf( "\n  . Seeding the random number generator..." );
     fflush( stdout );
 
-    if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
+    if( ( retval = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
                                (const unsigned char *) pers,
                                strlen( pers ) ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", retval );
         goto exit;
     }
 
@@ -133,31 +134,31 @@ int main( int argc, char **argv )
     /*
      * This can take a long time...
      */
-    if( ( ret = mbedtls_mpi_gen_prime( &P, nbits, 1,
+    if( ( retval = mbedtls_mpi_gen_prime( &P, nbits, 1,
                                mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_mpi_gen_prime returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_mpi_gen_prime returned %d\n\n", retval );
         goto exit;
     }
 
     mbedtls_printf( " ok\n  . Verifying that Q = (P-1)/2 is prime..." );
     fflush( stdout );
 
-    if( ( ret = mbedtls_mpi_sub_int( &Q, &P, 1 ) ) != 0 )
+    if( ( retval = mbedtls_mpi_sub_int( &Q, &P, 1 ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_mpi_sub_int returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_mpi_sub_int returned %d\n\n", retval );
         goto exit;
     }
 
-    if( ( ret = mbedtls_mpi_div_int( &Q, NULL, &Q, 2 ) ) != 0 )
+    if( ( retval = mbedtls_mpi_div_int( &Q, NULL, &Q, 2 ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_mpi_div_int returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_mpi_div_int returned %d\n\n", retval );
         goto exit;
     }
 
-    if( ( ret = mbedtls_mpi_is_prime( &Q, mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
+    if( ( retval = mbedtls_mpi_is_prime( &Q, mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_mpi_is_prime returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_mpi_is_prime returned %d\n\n", retval );
         goto exit;
     }
 
@@ -166,21 +167,22 @@ int main( int argc, char **argv )
 
     if( ( fout = fopen( "dh_prime.txt", "wb+" ) ) == NULL )
     {
-        ret = 1;
         mbedtls_printf( " failed\n  ! Could not create dh_prime.txt\n\n" );
         goto exit;
     }
 
-    if( ( ret = mbedtls_mpi_write_file( "P = ", &P, 16, fout ) != 0 ) ||
-        ( ret = mbedtls_mpi_write_file( "G = ", &G, 16, fout ) != 0 ) )
+    if( ( retval = mbedtls_mpi_write_file( "P = ", &P, 16, fout ) != 0 ) ||
+        ( retval = mbedtls_mpi_write_file( "G = ", &G, 16, fout ) != 0 ) )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_mpi_write_file returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_mpi_write_file returned %d\n\n", retval );
         fclose( fout );
         goto exit;
     }
 
     mbedtls_printf( " ok\n\n" );
     fclose( fout );
+
+    exitcode = MBEDTLS_EXIT_SUCCESS;
 
 exit:
 
@@ -193,10 +195,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_ENTROPY_C && MBEDTLS_FS_IO &&
           MBEDTLS_CTR_DRBG_C && MBEDTLS_GENPRIME */

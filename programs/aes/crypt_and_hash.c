@@ -76,8 +76,9 @@ int main( void )
 #else
 int main( int argc, char *argv[] )
 {
-    int ret = MBEDTLS_EXIT_FAILURE, i, n;
-    int mode, lastn;
+    int i, n;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
+    int mode;
     size_t keylen, ilen, olen;
     FILE *fkey, *fin = NULL, *fout = NULL;
 
@@ -175,12 +176,10 @@ int main( int argc, char *argv[] )
         mbedtls_fprintf( stderr, "Cipher '%s' not found\n", argv[4] );
         goto exit;
     }
-    if( ( ret = mbedtls_cipher_setup( &cipher_ctx, cipher_info) ) != 0 )
+    if( mbedtls_cipher_setup( &cipher_ctx, cipher_info) != 0 )
     {
         mbedtls_fprintf( stderr, "mbedtls_cipher_setup failed\n" );
         goto exit;
-    } else {
-        ret = MBEDTLS_EXIT_FAILURE;
     }
 
     md_info = mbedtls_md_info_from_string( argv[5] );
@@ -537,7 +536,7 @@ int main( int argc, char *argv[] )
         }
     }
 
-    ret = MBEDTLS_EXIT_SUCCESS;
+    exitcode = MBEDTLS_EXIT_SUCCESS;
 
 exit:
     if( fin )
@@ -551,9 +550,6 @@ exit:
     mbedtls_cipher_free( &cipher_ctx );
     mbedtls_md_free( &md_ctx );
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_CIPHER_C && MBEDTLS_MD_C && MBEDTLS_FS_IO */

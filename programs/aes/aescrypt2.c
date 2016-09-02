@@ -74,7 +74,8 @@ int main( void )
 #else
 int main( int argc, char *argv[] )
 {
-    int ret = MBEDTLS_EXIT_FAILURE;
+    int retval = 0;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
 
     unsigned int i, n;
     int mode, lastn;
@@ -103,13 +104,11 @@ int main( int argc, char *argv[] )
     mbedtls_aes_init( &aes_ctx );
     mbedtls_md_init( &sha_ctx );
 
-    ret = mbedtls_md_setup( &sha_ctx, mbedtls_md_info_from_type( MBEDTLS_MD_SHA256 ), 1 );
-    if( ret != 0 )
+    retval = mbedtls_md_setup( &sha_ctx, mbedtls_md_info_from_type( MBEDTLS_MD_SHA256 ), 1 );
+    if( retval != 0 )
     {
-        mbedtls_printf( "  ! mbedtls_md_setup() returned -0x%04x\n", -ret );
+        mbedtls_printf( "  ! mbedtls_md_setup() returned -0x%04x\n", -retval );
         goto exit;
-    } else {
-        ret = MBEDTLS_EXIT_FAILURE;
     }
 
     /*
@@ -438,7 +437,7 @@ int main( int argc, char *argv[] )
         }
     }
 
-    ret = MBEDTLS_EXIT_SUCCESS;
+    exitcode = MBEDTLS_EXIT_SUCCESS;
 
 exit:
     if( fin )
@@ -452,9 +451,6 @@ exit:
     mbedtls_aes_free( &aes_ctx );
     mbedtls_md_free( &sha_ctx );
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_AES_C && MBEDTLS_SHA256_C && MBEDTLS_FS_IO */

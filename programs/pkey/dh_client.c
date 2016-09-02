@@ -74,7 +74,8 @@ int main( void )
 {
     FILE *f;
 
-    int ret;
+    int retval = 0;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
     size_t n, buflen;
     mbedtls_net_context server_fd;
 
@@ -102,11 +103,11 @@ int main( void )
     fflush( stdout );
 
     mbedtls_entropy_init( &entropy );
-    if( ( ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
+    if( ( retval = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy,
                                (const unsigned char *) pers,
                                strlen( pers ) ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_ctr_drbg_seed returned %d\n", retval );
         goto exit;
     }
 
@@ -118,7 +119,6 @@ int main( void )
 
     if( ( f = fopen( "rsa_pub.txt", "rb" ) ) == NULL )
     {
-        ret = 1;
         mbedtls_printf( " failed\n  ! Could not open rsa_pub.txt\n" \
                 "  ! Please run rsa_genkey first\n\n" );
         goto exit;
@@ -126,10 +126,10 @@ int main( void )
 
     mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, 0 );
 
-    if( ( ret = mbedtls_mpi_read_file( &rsa.N, 16, f ) ) != 0 ||
-        ( ret = mbedtls_mpi_read_file( &rsa.E, 16, f ) ) != 0 )
+    if( ( retval = mbedtls_mpi_read_file( &rsa.N, 16, f ) ) != 0 ||
+        ( retval = mbedtls_mpi_read_file( &rsa.E, 16, f ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_mpi_read_file returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_mpi_read_file returned %d\n\n", retval );
         fclose( f );
         goto exit;
     }
@@ -145,10 +145,10 @@ int main( void )
                                              SERVER_PORT );
     fflush( stdout );
 
-    if( ( ret = mbedtls_net_connect( &server_fd, SERVER_NAME,
+    if( ( retval = mbedtls_net_connect( &server_fd, SERVER_NAME,
                                          SERVER_PORT, MBEDTLS_NET_PROTO_TCP ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_net_connect returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_net_connect returned %d\n\n", retval );
         goto exit;
     }
 
@@ -160,9 +160,9 @@ int main( void )
 
     memset( buf, 0, sizeof( buf ) );
 
-    if( ( ret = mbedtls_net_recv( &server_fd, buf, 2 ) ) != 2 )
+    if( ( retval = mbedtls_net_recv( &server_fd, buf, 2 ) ) != 2 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_net_recv returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_net_recv returned %d\n\n", retval );
         goto exit;
     }
 
@@ -178,23 +178,22 @@ int main( void )
      */
     memset( buf, 0, sizeof( buf ) );
 
-    if( ( ret = mbedtls_net_recv( &server_fd, buf, n ) ) != (int) n )
+    if( ( retval = mbedtls_net_recv( &server_fd, buf, n ) ) != (int) n )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_net_recv returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_net_recv returned %d\n\n", retval );
         goto exit;
     }
 
     p = buf, end = buf + buflen;
 
-    if( ( ret = mbedtls_dhm_read_params( &dhm, &p, end ) ) != 0 )
+    if( ( retval = mbedtls_dhm_read_params( &dhm, &p, end ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_dhm_read_params returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_dhm_read_params returned %d\n\n", retval );
         goto exit;
     }
 
     if( dhm.len < 64 || dhm.len > 512 )
     {
-        ret = 1;
         mbedtls_printf( " failed\n  ! Invalid DHM modulus size\n\n" );
         goto exit;
     }
@@ -210,17 +209,16 @@ int main( void )
 
     if( ( n = (size_t) ( end - p ) ) != rsa.len )
     {
-        ret = 1;
         mbedtls_printf( " failed\n  ! Invalid RSA signature size\n\n" );
         goto exit;
     }
 
     mbedtls_sha1( buf, (int)( p - 2 - buf ), hash );
 
-    if( ( ret = mbedtls_rsa_pkcs1_verify( &rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC,
+    if( ( retval = mbedtls_rsa_pkcs1_verify( &rsa, NULL, NULL, MBEDTLS_RSA_PUBLIC,
                                   MBEDTLS_MD_SHA256, 0, hash, p ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_rsa_pkcs1_verify returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_rsa_pkcs1_verify returned %d\n\n", retval );
         goto exit;
     }
 
@@ -231,16 +229,16 @@ int main( void )
     fflush( stdout );
 
     n = dhm.len;
-    if( ( ret = mbedtls_dhm_make_public( &dhm, (int) dhm.len, buf, n,
+    if( ( retval = mbedtls_dhm_make_public( &dhm, (int) dhm.len, buf, n,
                                  mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_dhm_make_public returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_dhm_make_public returned %d\n\n", retval );
         goto exit;
     }
 
-    if( ( ret = mbedtls_net_send( &server_fd, buf, n ) ) != (int) n )
+    if( ( retval = mbedtls_net_send( &server_fd, buf, n ) ) != (int) n )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_net_send returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_net_send returned %d\n\n", retval );
         goto exit;
     }
 
@@ -250,10 +248,10 @@ int main( void )
     mbedtls_printf( "\n  . Shared secret: " );
     fflush( stdout );
 
-    if( ( ret = mbedtls_dhm_calc_secret( &dhm, buf, sizeof( buf ), &n,
+    if( ( retval = mbedtls_dhm_calc_secret( &dhm, buf, sizeof( buf ), &n,
                                  mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_dhm_calc_secret returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_dhm_calc_secret returned %d\n\n", retval );
         goto exit;
     }
 
@@ -275,9 +273,9 @@ int main( void )
 
     memset( buf, 0, sizeof( buf ) );
 
-    if( ( ret = mbedtls_net_recv( &server_fd, buf, 16 ) ) != 16 )
+    if( ( retval = mbedtls_net_recv( &server_fd, buf, 16 ) ) != 16 )
     {
-        mbedtls_printf( " failed\n  ! mbedtls_net_recv returned %d\n\n", ret );
+        mbedtls_printf( " failed\n  ! mbedtls_net_recv returned %d\n\n", retval );
         goto exit;
     }
 
@@ -285,7 +283,7 @@ int main( void )
     buf[16] = '\0';
     mbedtls_printf( "\n  . Plaintext is \"%s\"\n\n", (char *) buf );
 
-    ret = MBEDTLS_EXIT_SUCCESS;
+    exitcode = MBEDTLS_EXIT_SUCCESS;
 
 exit:
 
@@ -302,10 +300,7 @@ exit:
     fflush( stdout ); getchar();
 #endif
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_AES_C && MBEDTLS_DHM_C && MBEDTLS_ENTROPY_C &&
           MBEDTLS_NET_C && MBEDTLS_RSA_C && MBEDTLS_SHA256_C &&

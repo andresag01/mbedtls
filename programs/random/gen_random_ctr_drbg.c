@@ -55,7 +55,8 @@ int main( void )
 int main( int argc, char *argv[] )
 {
     FILE *f;
-    int i, k, ret;
+    int i, k, retval = 1;
+    int exitcode = MBEDTLS_EXIT_FAILURE;
     mbedtls_ctr_drbg_context ctr_drbg;
     mbedtls_entropy_context entropy;
     unsigned char buf[1024];
@@ -65,48 +66,48 @@ int main( int argc, char *argv[] )
     if( argc < 2 )
     {
         mbedtls_fprintf( stderr, "usage: %s <output filename>\n", argv[0] );
-        return( 1 );
+        return( exitcode );
     }
 
     if( ( f = fopen( argv[1], "wb+" ) ) == NULL )
     {
         mbedtls_printf( "failed to open '%s' for writing.\n", argv[1] );
-        return( 1 );
+        return( exitcode );
     }
 
     mbedtls_entropy_init( &entropy );
-    ret = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char *) "RANDOM_GEN", 10 );
-    if( ret != 0 )
+    retval = mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char *) "RANDOM_GEN", 10 );
+    if( retval != 0 )
     {
-        mbedtls_printf( "failed in mbedtls_ctr_drbg_seed: %d\n", ret );
+        mbedtls_printf( "failed in mbedtls_ctr_drbg_seed: %d\n", retval );
         goto cleanup;
     }
     mbedtls_ctr_drbg_set_prediction_resistance( &ctr_drbg, MBEDTLS_CTR_DRBG_PR_OFF );
 
 #if defined(MBEDTLS_FS_IO)
-    ret = mbedtls_ctr_drbg_update_seed_file( &ctr_drbg, "seedfile" );
+    retval = mbedtls_ctr_drbg_update_seed_file( &ctr_drbg, "seedfile" );
 
-    if( ret == MBEDTLS_ERR_CTR_DRBG_FILE_IO_ERROR )
+    if( retval == MBEDTLS_ERR_CTR_DRBG_FILE_IO_ERROR )
     {
         mbedtls_printf( "Failed to open seedfile. Generating one.\n" );
-        ret = mbedtls_ctr_drbg_write_seed_file( &ctr_drbg, "seedfile" );
-        if( ret != 0 )
+        retval = mbedtls_ctr_drbg_write_seed_file( &ctr_drbg, "seedfile" );
+        if( retval != 0 )
         {
-            mbedtls_printf( "failed in mbedtls_ctr_drbg_write_seed_file: %d\n", ret );
+            mbedtls_printf( "failed in mbedtls_ctr_drbg_write_seed_file: %d\n", retval );
             goto cleanup;
         }
     }
-    else if( ret != 0 )
+    else if( retval != 0 )
     {
-        mbedtls_printf( "failed in mbedtls_ctr_drbg_update_seed_file: %d\n", ret );
+        mbedtls_printf( "failed in mbedtls_ctr_drbg_update_seed_file: %d\n", retval );
         goto cleanup;
     }
 #endif
 
     for( i = 0, k = 768; i < k; i++ )
     {
-        ret = mbedtls_ctr_drbg_random( &ctr_drbg, buf, sizeof( buf ) );
-        if( ret != 0 )
+        retval = mbedtls_ctr_drbg_random( &ctr_drbg, buf, sizeof( buf ) );
+        if( retval != 0 )
         {
             mbedtls_printf("failed!\n");
             goto cleanup;
@@ -119,7 +120,7 @@ int main( int argc, char *argv[] )
         fflush( stdout );
     }
 
-    ret = 0;
+    exitcode = MBEDTLS_EXIT_SUCCESS;
 
 cleanup:
     mbedtls_printf("\n");
@@ -128,9 +129,6 @@ cleanup:
     mbedtls_ctr_drbg_free( &ctr_drbg );
     mbedtls_entropy_free( &entropy );
 
-    if( ret != MBEDTLS_EXIT_SUCCESS && ret != MBEDTLS_EXIT_FAILURE )
-        ret = MBEDTLS_EXIT_FAILURE;
-
-    return( ret );
+    return( exitcode );
 }
 #endif /* MBEDTLS_CTR_DRBG_C && MBEDTLS_ENTROPY_C */
