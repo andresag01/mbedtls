@@ -1,0 +1,26 @@
+Footprint of standard configurations (minus net.c, timing.c, fs_io)
+for bare-metal ARM Cortex-M3/M4 microcontrollers.
+
+mbed TLS 2.3.0 (git head: 741f230e78)
+arm-none-eabi-gcc (GNU Tools for ARM Embedded Processors) 5.4.1 20160609 (release) [ARM/embedded-5-branch revision 237715]
+CFLAGS=-Os -march=armv7-m -mthumb
+
+default (include/mbedtls/config.h):
+   text	   data	    bss	    dec	    hex	filename
+ 246130	    612	   9360	 256102	  3e866	(TOTALS)
+
+yotta (yotta/module/mbedtls/config.h):
+   text	   data	    bss	    dec	    hex	filename
+ 169011	    400	   8876	 178287	  2b86f	(TOTALS)
+
+thread (configs/config-thread.h):
+   text	   data	    bss	    dec	    hex	filename
+  56561	     19	     10	  56590	   dd0e	(TOTALS)
+
+suite-b (configs/config-suite-b.h):
+   text	   data	    bss	    dec	    hex	filename
+  79136	     88	     11	  79235	  13583	(TOTALS)
+
+psk (configs/config-ccm-psk-tls1_2.h):
+   text	   data	    bss	    dec	    hex	filename
+  27791	     12	      4	  27807	   6c9f	(TOTALS)

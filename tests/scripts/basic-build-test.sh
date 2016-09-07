@@ -29,7 +29,7 @@
 #
 
 # Abort on errors (and uninitiliased variables)
-set -eu
+set -eux
 
 if [ -d library -a -d include -a -d tests ]; then :; else
     echo "Must be run from mbed TLS root" >&2
@@ -72,36 +72,59 @@ echo
 cd ..
 make lcov |tee tests/cov-$TEST_OUTPUT
 
+# Step - Clean up the changes so far
+make clean
+
+if [ -f "$CONFIG_BAK" ]; then
+    mv "$CONFIG_BAK" "$CONFIG_H"
+fi
+
+# Step 3a - Calculate RAM usage
+./scripts/memory.sh |tee tests/memory-$TEST_OUTPUT
+
+# Step 3b - Calculate Flash usage
+./scripts/footprint.sh |tee tests/footprint-$TEST_OUTPUT
+
+#rm 00-footprint-summary.txt
+#rm mbedtls-footprint.zip
+#rm size-default.txt
+#rm size-psk.txt
+#rm size-suite-b.txt
+#rm size-thread.txt
+#rm size-yotta.txt
+
 
 # Step 4 - Summarise the test report
 echo
 echo "========================================================================="
-echo "Test Report Summary"
+echo "Creating test reports"
 echo
 
 cd tests
 
-# Step 4a - Unit tests
+REPORT_TIMESTAMP="$(date +%s)"
+: ${REPORTS_DIR:=./basic-build-tests-reports}
+if [ ! -d $REPORTS_DIR ]; then
+    mkdir -p "$REPORTS_DIR"
+fi
+
+# Steap 4a - Unit tests
 echo "Unit tests - tests/scripts/run-test-suites.pl"
 
 PASSED_TESTS=$(tail -n6 unit-test-$TEST_OUTPUT|sed -n -e 's/test cases passed :[\t]*\([0-9]*\)/\1/p'| tr -d ' ')
 SKIPPED_TESTS=$(tail -n6 unit-test-$TEST_OUTPUT|sed -n -e 's/skipped :[ \t]*\([0-9]*\)/\1/p'| tr -d ' ')
-TOTAL_SUITES=$(tail -n6 unit-test-$TEST_OUTPUT|sed -n -e 's/.* (\([0-9]*\) .*, [0-9]* tests run)/\1/p'| tr -d ' ')
 FAILED_TESTS=$(tail -n6 unit-test-$TEST_OUTPUT|sed -n -e 's/failed :[\t]*\([0-9]*\)/\1/p' |tr -d ' ')
 
-echo "No test suites     : $TOTAL_SUITES"
-echo "Passed             : $PASSED_TESTS"
-echo "Failed             : $FAILED_TESTS"
-echo "Skipped            : $SKIPPED_TESTS"
-echo "Total exec'd tests : $(($PASSED_TESTS + $FAILED_TESTS))"
-echo "Total avail tests  : $(($PASSED_TESTS + $FAILED_TESTS + $SKIPPED_TESTS))"
-echo
+UNIT_TESTS_REPORT="${REPORTS_DIR}/unit_tests_$REPORT_TIMESTAMP"
 
-TOTAL_PASS=$PASSED_TESTS
-TOTAL_FAIL=$FAILED_TESTS
-TOTAL_SKIP=$SKIPPED_TESTS
-TOTAL_AVAIL=$(($PASSED_TESTS + $FAILED_TESTS + $SKIPPED_TESTS))
-TOTAL_EXED=$(($PASSED_TESTS + $FAILED_TESTS))
+echo "Passed=$PASSED_TESTS"                                      >> "$UNIT_TESTS_REPORT"
+echo "Failed=$FAILED_TESTS"                                      >> "$UNIT_TESTS_REPORT"
+echo "Skipped=$SKIPPED_TESTS"                                    >> "$UNIT_TESTS_REPORT"
+echo "Executed=$(($PASSED_TESTS + $FAILED_TESTS))"               >> "$UNIT_TESTS_REPORT"
+echo "Total=$(($PASSED_TESTS + $FAILED_TESTS + $SKIPPED_TESTS))" >> "$UNIT_TESTS_REPORT"
+
+echo "    Test report written to '$UNIT_TESTS_REPORT'"
+echo
 
 # Step 4b - TLS Options tests
 echo "TLS Options tests - tests/ssl-opt.sh"
@@ -111,19 +134,16 @@ SKIPPED_TESTS=$(tail -n5 sys-test-$TEST_OUTPUT|sed -n -e 's/.* ([0-9]* \/ [0-9]*
 TOTAL_TESTS=$(tail -n5 sys-test-$TEST_OUTPUT|sed -n -e 's/.* ([0-9]* \/ \([0-9]*\) tests ([0-9]* skipped))$/\1/p')
 FAILED_TESTS=$(($TOTAL_TESTS - $PASSED_TESTS))
 
-echo "Passed             : $PASSED_TESTS"
-echo "Failed             : $FAILED_TESTS"
-echo "Skipped            : $SKIPPED_TESTS"
-echo "Total exec'd tests : $TOTAL_TESTS"
-echo "Total avail tests  : $(($TOTAL_TESTS + $SKIPPED_TESTS))"
+OPTS_TESTS_REPORT="${REPORTS_DIR}/opts_tests_$REPORT_TIMESTAMP"
+
+echo "Passed=$PASSED_TESTS"                      >> "$OPTS_TESTS_REPORT"
+echo "Failed=$FAILED_TESTS"                      >> "$OPTS_TESTS_REPORT"
+echo "Skipped=$SKIPPED_TESTS"                    >> "$OPTS_TESTS_REPORT"
+echo "Executed=$TOTAL_TESTS"                     >> "$OPTS_TESTS_REPORT"
+echo "Total=$(($TOTAL_TESTS + $SKIPPED_TESTS))"  >> "$OPTS_TESTS_REPORT"
+
+echo "    Test report written to '$OPTS_TESTS_REPORT'"
 echo
-
-TOTAL_PASS=$(($TOTAL_PASS+$PASSED_TESTS))
-TOTAL_FAIL=$(($TOTAL_FAIL+$FAILED_TESTS))
-TOTAL_SKIP=$(($TOTAL_SKIP+$SKIPPED_TESTS))
-TOTAL_AVAIL=$(($TOTAL_AVAIL + $TOTAL_TESTS + $SKIPPED_TESTS))
-TOTAL_EXED=$(($TOTAL_EXED + $TOTAL_TESTS))
-
 
 # Step 4c - System Compatibility tests
 echo "System/Compatibility tests - tests/compat.sh"
@@ -133,33 +153,19 @@ SKIPPED_TESTS=$(tail -n5 compat-test-$TEST_OUTPUT|sed -n -e 's/.* ([0-9]* \/ [0-
 EXED_TESTS=$(tail -n5 compat-test-$TEST_OUTPUT|sed -n -e 's/.* ([0-9]* \/ \([0-9]*\) tests ([0-9]* skipped))$/\1/p')
 FAILED_TESTS=$(($EXED_TESTS - $PASSED_TESTS))
 
-echo "Passed             : $PASSED_TESTS"
-echo "Failed             : $FAILED_TESTS"
-echo "Skipped            : $SKIPPED_TESTS"
-echo "Total exec'd tests : $EXED_TESTS"
-echo "Total avail tests  : $(($EXED_TESTS + $SKIPPED_TESTS))"
+COMPAT_TESTS_REPORT="$REPORTS_DIR/compat_tests_$REPORT_TIMESTAMP"
+
+echo "Passed=$PASSED_TESTS"                       >> "$COMPAT_TESTS_REPORT"
+echo "Failed=$FAILED_TESTS"                       >> "$COMPAT_TESTS_REPORT"
+echo "Skipped=$SKIPPED_TESTS"                     >> "$COMPAT_TESTS_REPORT"
+echo "Executed=$EXED_TESTS"                       >> "$COMPAT_TESTS_REPORT"
+echo "Total=$(($EXED_TESTS + $SKIPPED_TESTS))"    >> "$COMPAT_TESTS_REPORT"
 echo
 
-TOTAL_PASS=$(($TOTAL_PASS+$PASSED_TESTS))
-TOTAL_FAIL=$(($TOTAL_FAIL+$FAILED_TESTS))
-TOTAL_SKIP=$(($TOTAL_SKIP+$SKIPPED_TESTS))
-TOTAL_AVAIL=$(($TOTAL_AVAIL + $EXED_TESTS + $SKIPPED_TESTS))
-TOTAL_EXED=$(($TOTAL_EXED + $EXED_TESTS))
-
-
-# Step 4d - Grand totals
-echo "-------------------------------------------------------------------------"
-echo "Total tests"
-
-echo "Total Passed       : $TOTAL_PASS"
-echo "Total Failed       : $TOTAL_FAIL"
-echo "Total Skipped      : $TOTAL_SKIP"
-echo "Total exec'd tests : $TOTAL_EXED"
-echo "Total avail tests  : $TOTAL_AVAIL"
+echo "    Test report written to '$COMPAT_TESTS_REPORT'"
 echo
 
-
-# Step 4e - Coverage
+# Step 4d - Coverage
 echo "Coverage"
 
 LINES_TESTED=$(tail -n3 cov-$TEST_OUTPUT|sed -n -e 's/  lines......: [0-9]*.[0-9]% (\([0-9]*\) of [0-9]* lines)/\1/p')
@@ -173,18 +179,33 @@ LINES_PERCENT="$(($LINES_PERCENT/10)).$(($LINES_PERCENT-($LINES_PERCENT/10)*10))
 FUNCS_PERCENT=$((1000*$FUNCS_TESTED/$FUNCS_TOTAL))
 FUNCS_PERCENT="$(($FUNCS_PERCENT/10)).$(($FUNCS_PERCENT-($FUNCS_PERCENT/10)*10))"
 
-echo "Lines Tested       : $LINES_TESTED of $LINES_TOTAL $LINES_PERCENT%"
-echo "Functions Tested   : $FUNCS_TESTED of $FUNCS_TOTAL $FUNCS_PERCENT%"
+COVERAGE_REPORT="$REPORTS_DIR/coverage_$REPORT_TIMESTAMP"
+
+echo "Tested lines=$LINES_TESTED"     >> "$COVERAGE_REPORT"
+echo "Total lines=$LINES_TOTAL"       >> "$COVERAGE_REPORT"
+echo "Tested functions=$FUNCS_TESTED" >> "$COVERAGE_REPORT"
+echo "Total functions=$FUNCS_TOTAL"   >> "$COVERAGE_REPORT"
 echo
 
+# Step 4e - Write general information about this test run
+GENERAL_INFO="$REPORTS_DIR/general_$REPORT_TIMESTAMP"
 
-rm unit-test-$TEST_OUTPUT
-rm sys-test-$TEST_OUTPUT
-rm compat-test-$TEST_OUTPUT
-rm cov-$TEST_OUTPUT
+echo "hash=$(git rev-parse HEAD)" >> "$GENERAL_INFO"
+
+# Step 4f - Write RAM consumption
+cp memory-$TEST_OUTPUT "$REPORTS_DIR/memory_$REPORT_TIMESTAMP"
+
+# Step 4g - Write FLASH consumption
+cp footprint-$TEST_OUTPUT "$REPORT_DIR/footprint_$REPORT_TIMESTAMP"
+
+#rm unit-test-$TEST_OUTPUT
+#rm sys-test-$TEST_OUTPUT
+#rm compat-test-$TEST_OUTPUT
+#rm cov-$TEST_OUTPUT
+#rm memory-$TEST_OTPUT
+#rm footprint-$TEST_OUTPUT
 
 cd ..
-
 make clean
 
 if [ -f "$CONFIG_BAK" ]; then

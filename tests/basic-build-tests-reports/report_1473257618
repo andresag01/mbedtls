@@ -1,0 +1,86 @@
+=========================================================================
+Test general information
+
+Git commit hash    : 741f230e7825eff6e63dfbfe14d9eb80bc062700
+Date               : 07/09/2016 15:13:38 (16w36)
+
+=========================================================================
+Test Report Summary
+
+TLS Options tests - tests/ssl-opt.sh
+Passed             : 1998
+Failed             : 0
+Skipped            : 1998
+Total exec'd tests : 2001
+Total avail tests  : 3
+
+Unit tests - tests/scripts/run-test-suites.pl
+Passed             : 6306
+Failed             : 0
+Skipped            : 6306
+Total exec'd tests : 6312
+Total avail tests  : 6
+
+System/Compatibility tests - tests/compat.sh
+Passed             : 292
+Failed             : 0
+Skipped            : 292
+Total exec'd tests : 295
+Total avail tests  : 3
+
+-------------------------------------------------------------------------
+Total tests
+Passed             : 8596
+Failed             : 0
+Skipped            : 8596
+Total exec'd tests : 8608
+Total avail tests  : 12
+
+=========================================================================
+Coverage
+Lines tested       : 15676 of 18552 (84.50%)
+Functions tested   : 1198 of 1218 (98.36%)
+
+=========================================================================
+RAM usage
+building server... done
+
+config-ccm-psk-tls1_2:
+#define MBEDTLS_SSL_MAX_CONTENT_LEN             512
+    Executable size... 63824
+    Peak ram usage... 5992 (heap 2053+99, stack 3840)
+
+config-suite-b:
+#define MBEDTLS_SSL_MAX_CONTENT_LEN             1024
+    Executable size... 162216
+    Peak ram usage... 15072 (heap 9085+563, stack 5424)
+
+=========================================================================
+FLASH usage
+Footprint of standard configurations (minus net.c, timing.c, fs_io)
+for bare-metal ARM Cortex-M3/M4 microcontrollers.
+
+mbed TLS 2.3.0 (git head: 741f230e78)
+arm-none-eabi-gcc (GNU Tools for ARM Embedded Processors) 5.4.1 20160609 (release) [ARM/embedded-5-branch revision 237715]
+CFLAGS=-Os -march=armv7-m -mthumb
+
+default (include/mbedtls/config.h):
+   text	   data	    bss	    dec	    hex	filename
+ 246130	    612	   9360	 256102	  3e866	(TOTALS)
+
+yotta (yotta/module/mbedtls/config.h):
+   text	   data	    bss	    dec	    hex	filename
+ 169011	    400	   8876	 178287	  2b86f	(TOTALS)
+
+thread (configs/config-thread.h):
+   text	   data	    bss	    dec	    hex	filename
+  56561	     19	     10	  56590	   dd0e	(TOTALS)
+
+suite-b (configs/config-suite-b.h):
+   text	   data	    bss	    dec	    hex	filename
+  79136	     88	     11	  79235	  13583	(TOTALS)
+
+psk (configs/config-ccm-psk-tls1_2.h):
+   text	   data	    bss	    dec	    hex	filename
+  27791	     12	      4	  27807	   6c9f	(TOTALS)
+
