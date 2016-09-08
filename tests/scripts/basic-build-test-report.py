@@ -4,7 +4,9 @@ import os
 import sys
 import re
 import datetime
+import time
 import subprocess
+import matplotlib.pyplot as plt
 
 REPORTS_DIR    = os.path.join("tests", "basic-build-tests-reports")
 REPORT_HISTORY = 10
@@ -97,14 +99,34 @@ def extract_data(compat_filepath, coverage_filepath, general_filepath,
                 print "Unknown key {0} when parsing {1}".format(key, coverage_filepath)
 
 def write_report(timestamp):
+    total_passed = []
+    total_failed = []
+    total_skipped = []
+    total_executed = []
+    total_tests = []
+
+    for i in range(len(commit)):
+        passed   = 0
+        failed   = 0
+        skipped  = 0
+        executed = 0
+        tests    = 0
+
+        for key in results.keys():
+            passed   += results[key]["Passed"][i]
+            failed   += results[key]["Failed"][i]
+            skipped  += results[key]["Skipped"][i]
+            executed += results[key]["Executed"][i]
+            tests    += results[key]["Total"][i]
+
+        total_passed.append(passed)
+        total_failed.append(failed)
+        total_skipped.append(skipped)
+        total_executed.append(executed)
+        total_tests.append(tests)
+
     # Write the ascii report
     with open(os.path.join(REPORTS_DIR, "report_{0}".format(timestamp)), "w") as f:
-        total_passed = 0
-        total_failed = 0
-        total_skipped = 0
-        total_executed = 0
-        total_tests = 0
-
         readable_date = dates[0].strftime('%d/%m/%Y %H:%M:%S')
         week          = "{0}w{1}".format(dates[0].strftime('%y'),
             dates[0].isocalendar()[1])
@@ -126,19 +148,13 @@ def write_report(timestamp):
             f.write("Total avail tests  : {0}\n".format(results[name]["Skipped" ][0]))
             f.write("\n")
 
-            total_passed   += results[name]["Passed"  ][0]
-            total_failed   += results[name]["Failed"  ][0]
-            total_skipped  += results[name]["Executed"][0]
-            total_executed += results[name]["Total"   ][0]
-            total_tests    += results[name]["Skipped" ][0]
-
         f.write("-------------------------------------------------------------------------\n")
         f.write("Total tests\n")
-        f.write("Passed             : {0}\n".format(total_passed  ))
-        f.write("Failed             : {0}\n".format(total_failed  ))
-        f.write("Skipped            : {0}\n".format(total_skipped ))
-        f.write("Total exec'd tests : {0}\n".format(total_executed))
-        f.write("Total avail tests  : {0}\n".format(total_tests   ))
+        f.write("Passed             : {0}\n".format(total_passed[0]  ))
+        f.write("Failed             : {0}\n".format(total_failed[0]  ))
+        f.write("Skipped            : {0}\n".format(total_skipped[0] ))
+        f.write("Total exec'd tests : {0}\n".format(total_executed[0]))
+        f.write("Total avail tests  : {0}\n".format(total_tests[0]   ))
         f.write("\n")
 
         f.write("=========================================================================\n")
@@ -167,19 +183,43 @@ def write_report(timestamp):
         # Get the git stat
         git_command = ["git", "diff", "--stat", commit[1], commit[0]]
         p = subprocess.Popen(git_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        try:
-            out, err = p.communicate(timeout=5)
-        except TimeoutExpired:
-            p.kill()
-            print "Timeout for git diff --stat expired"
-            sys.exit(1)
 
         f.write("=========================================================================\n")
         f.write("Lines changed\n")
-        f.write(git_command)
+        f.write(" ".join(git_command))
         f.write("\n")
-        f.write(out)
+        f.write(p.communicate()[0])
         f.write("\n")
+
+        # Plot the graphs
+        total_passed.reverse()
+        total_failed.reverse()
+        total_skipped.reverse()
+        total_executed.reverse()
+        total_tests.reverse()
+        ticks_dates = \
+            ["{0}w{1}".format(g.strftime('%y'), g.isocalendar()[1]) for g in dates]
+
+        total_bars = len(commit)
+        bar_width  = 0.35
+        ind        = range(total_bars)
+
+        passed_bar = plt.bar(ind, total_passed, bar_width, color='r')
+        failed_bar = plt.bar(ind, total_failed, bar_width, color='b',
+            bottom=total_passed)
+        skipped_bar = plt.bar(ind, total_skipped, bar_width, color='g',
+            bottom=[x + y for x, y in zip(total_passed, total_failed)])
+
+        plt.ylabel("Number of tests")
+        plt.title("mbed TLS test resutls")
+        plt.xticks([float(w) + bar_width / 2 for w in ind], ticks_dates, size="small")
+        plt.legend([passed_bar[0], failed_bar[0], skipped_bar[0]],
+            ["Passed", "Failed", "Skipped"], bbox_to_anchor=(1.05, 1),
+            loc=2, borderaxespad=0.)
+        fig = plt.gcf()
+        fig.set_size_inches(26.0, 10.5)
+        fig.savefig(os.path.join(REPORTS_DIR,
+            "barchart_{0}.png".format(int(time.mktime(dates[0].timetuple())))))
 
 def main():
     # List the contents of the directory and sort them.

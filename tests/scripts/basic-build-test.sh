@@ -85,13 +85,13 @@ fi
 # Step 3b - Calculate Flash usage
 ./scripts/footprint.sh |tee tests/footprint-$TEST_OUTPUT
 
-#rm 00-footprint-summary.txt
-#rm mbedtls-footprint.zip
-#rm size-default.txt
-#rm size-psk.txt
-#rm size-suite-b.txt
-#rm size-thread.txt
-#rm size-yotta.txt
+rm 00-footprint-summary.txt
+rm mbedtls-footprint.zip
+rm size-default.txt
+rm size-psk.txt
+rm size-suite-b.txt
+rm size-thread.txt
+rm size-yotta.txt
 
 
 # Step 4 - Summarise the test report
@@ -196,14 +196,14 @@ echo "hash=$(git rev-parse HEAD)" >> "$GENERAL_INFO"
 cp memory-$TEST_OUTPUT "$REPORTS_DIR/memory_$REPORT_TIMESTAMP"
 
 # Step 4g - Write FLASH consumption
-cp footprint-$TEST_OUTPUT "$REPORT_DIR/footprint_$REPORT_TIMESTAMP"
+cp footprint-$TEST_OUTPUT "$REPORTS_DIR/footprint_$REPORT_TIMESTAMP"
 
-#rm unit-test-$TEST_OUTPUT
-#rm sys-test-$TEST_OUTPUT
-#rm compat-test-$TEST_OUTPUT
-#rm cov-$TEST_OUTPUT
-#rm memory-$TEST_OTPUT
-#rm footprint-$TEST_OUTPUT
+rm unit-test-$TEST_OUTPUT
+rm sys-test-$TEST_OUTPUT
+rm compat-test-$TEST_OUTPUT
+rm cov-$TEST_OUTPUT
+rm memory-$TEST_OTPUT
+rm footprint-$TEST_OUTPUT
 
 cd ..
 make clean
