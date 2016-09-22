@@ -42,6 +42,7 @@ fi
 : ${GNUTLS_SERV:="gnutls-serv"}
 : ${GNUTLS_LEGACY_CLI:="$GNUTLS_CLI"}
 : ${GNUTLS_LEGACY_SERV:="$GNUTLS_SERV"}
+: ${CSV_FILE:="/home/andama01/Documents/mbedtls/csv_reports/basic-build-tests_$(date +%s).csv"}
 
 # To avoid setting OpenSSL and GnuTLS for each call to compat.sh and ssl-opt.sh
 # we just export the variables they require
@@ -80,18 +81,19 @@ perl scripts/run-test-suites.pl -v |tee unit-test-$TEST_OUTPUT
 echo
 
 # Step 2b - System Tests
-sh ssl-opt.sh |tee sys-test-$TEST_OUTPUT
+sh ssl-opt.sh --csv "$CSV_FILE" |tee sys-test-$TEST_OUTPUT
 echo
 
 # Step 2c - Compatibility tests
-sh compat.sh -m 'tls1 tls1_1 tls1_2 dtls1 dtls1_2' | \
+sh compat.sh -m 'tls1 tls1_1 tls1_2 dtls1 dtls1_2' --csv "$CSV_FILE" | \
     tee compat-test-$TEST_OUTPUT
-OPENSSL_CMD="$OPENSSL_LEGACY"                               \
-    sh compat.sh -m 'ssl3' |tee -a compat-test-$TEST_OUTPUT
-OPENSSL_CMD="$OPENSSL_LEGACY"                                       \
-    GNUTLS_CLI="$GNUTLS_LEGACY_CLI"                                 \
-    GNUTLS_SERV="$GNUTLS_LEGACY_SERV"                               \
-    sh compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES\|RC4\|ARCFOUR' | \
+OPENSSL_CMD="$OPENSSL_LEGACY"                  \
+    sh compat.sh -m 'ssl3' --csv "$CSV_FILE" | \
+    tee -a compat-test-$TEST_OUTPUT
+OPENSSL_CMD="$OPENSSL_LEGACY"                                                         \
+    GNUTLS_CLI="$GNUTLS_LEGACY_CLI"                                                   \
+    GNUTLS_SERV="$GNUTLS_LEGACY_SERV"                                                 \
+    sh compat.sh -e '3DES\|DES-CBC3' -f 'NULL\|DES\|RC4\|ARCFOUR' --csv "$CSV_FILE" | \
     tee -a compat-test-$TEST_OUTPUT
 echo
 
