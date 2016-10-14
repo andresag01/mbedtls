@@ -42,7 +42,7 @@ fi
 : ${GNUTLS_SERV:="gnutls-serv"}
 : ${GNUTLS_LEGACY_CLI:="$GNUTLS_CLI"}
 : ${GNUTLS_LEGACY_SERV:="$GNUTLS_SERV"}
-: ${CSV_FILE:="/home/andama01/Documents/mbedtls/csv_reports/basic-build-tests_$(date +%s).csv"}
+: ${CSV_FILE:="./tests/basic-build-tests_$(date +%s).csv"}
 
 # To avoid setting OpenSSL and GnuTLS for each call to compat.sh and ssl-opt.sh
 # we just export the variables they require
