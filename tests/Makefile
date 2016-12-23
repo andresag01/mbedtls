@@ -84,7 +84,8 @@ APPS =	test_suite_aes.ecb$(EXEXT)	test_suite_aes.cbc$(EXEXT)	\
 	test_suite_rsa$(EXEXT)		test_suite_shax$(EXEXT)		\
 	test_suite_ssl$(EXEXT)		test_suite_timing$(EXEXT)			\
 	test_suite_x509parse$(EXEXT)	test_suite_x509write$(EXEXT)	\
-	test_suite_xtea$(EXEXT)		test_suite_version$(EXEXT)
+	test_suite_xtea$(EXEXT)		test_suite_version$(EXEXT)			\
+	test_suite_timeconst.mpi$(EXEXT)
 
 .SILENT:
 
@@ -192,6 +193,10 @@ test_suite_hmac_drbg.nopr.c : suites/test_suite_hmac_drbg.function suites/test_s
 test_suite_hmac_drbg.pr.c : suites/test_suite_hmac_drbg.function suites/test_suite_hmac_drbg.pr.data scripts/generate_code.pl suites/helpers.function suites/main_test.function
 	echo "  Gen   $@"
 	perl scripts/generate_code.pl suites test_suite_hmac_drbg test_suite_hmac_drbg.pr
+
+test_suite_timeconst.mpi.c : suites/test_suite_timeconst.mpi.function suites/test_suite_timeconst.mpi.data scripts/generate_code.pl suites/helpers.function suites/main_test.function
+	echo "  Gen   $@"
+	perl scripts/generate_code.pl suites test_suite_timeconst.mpi test_suite_timeconst.mpi
 
 %.c : suites/%.function suites/%.data scripts/generate_code.pl suites/helpers.function suites/main_test.function
 	echo "  Gen   $@"
@@ -434,6 +439,10 @@ test_suite_debug$(EXEXT): test_suite_debug.c $(DEP)
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $<	$(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
 test_suite_version$(EXEXT): test_suite_version.c $(DEP)
+	echo "  CC    $<"
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $<	$(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
+
+test_suite_timeconst.mpi$(EXEXT): test_suite_timeconst.mpi.c $(DEP)
 	echo "  CC    $<"
 	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $<	$(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 

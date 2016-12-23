@@ -1,0 +1,523 @@
+/* BEGIN_HEADER */
+#include "mbedtls/bignum.h"
+#include "mbedtls/timing.h"
+#include "mbedtls/ctr_drbg.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+int timeconst_mpi_shift( int samples, int mpi_size,
+                         mbedtls_ctr_drbg_context *ctr_drbg,
+                         int (*fut)(mbedtls_mpi *, size_t) );
+
+int timeconst_mpi_mpi( int samples, int mpi_size,
+                       mbedtls_ctr_drbg_context *ctr_drbg,
+                       int (*fut)(mbedtls_mpi *, const mbedtls_mpi *, const mbedtls_mpi *) );
+
+int timeconst_mpi_int( int samples, int mpi_size,
+                       mbedtls_ctr_drbg_context *ctr_drbg,
+                       int (*fut)(mbedtls_mpi *, const mbedtls_mpi *, mbedtls_mpi_sint) );
+
+int timeconst_mpi_div_int( int samples, int mpi_size,
+                           mbedtls_ctr_drbg_context *ctr_drbg,
+                           int (*fut)(mbedtls_mpi *, mbedtls_mpi *, const mbedtls_mpi *, mbedtls_mpi_sint) );
+
+int timeconst_mpi_mod_int( int samples, int mpi_size,
+                           mbedtls_ctr_drbg_context *ctr_drbg,
+                           int (*fut)(mbedtls_mpi_uint *, const mbedtls_mpi *, mbedtls_mpi_sint) );
+
+int timeconst_mpi_div_mpi( int samples, int mpi_size,
+                           mbedtls_ctr_drbg_context *ctr_drbg,
+                           int (*fut)(mbedtls_mpi *, mbedtls_mpi *, const mbedtls_mpi *, const mbedtls_mpi *) );
+
+int timeconst_mpi_mul_int( int samples, int mpi_size,
+                           mbedtls_ctr_drbg_context *ctr_drbg,
+                           int (*fut)(mbedtls_mpi *, const mbedtls_mpi *, mbedtls_mpi_uint) );
+
+#define TEST_TIMECONST(tester,fut)                                      \
+{                                                                       \
+    mbedtls_printf( " %-19s: ", #fut );                                 \
+    TEST_ASSERT( tester( samples, mpi_size, &ctr_drbg, fut )  == 0 );   \
+}
+/* END_HEADER */
+
+/* BEGIN_DEPENDENCIES
+ * depends_on:MBEDTLS_BIGNUM_C:MBEDTLS_TIMING_C:MBEDTLS_CTR_DRBG_C
+ * END_DEPENDENCIES
+ */
+
+/* BEGIN_CASE */
+void timeconst_mpi( int samples, int mpi_size )
+{
+    mbedtls_ctr_drbg_context ctr_drbg;
+
+    mbedtls_ctr_drbg_init( &ctr_drbg );
+
+    TEST_ASSERT( mbedtls_ctr_drbg_seed( &ctr_drbg, myrand, NULL, NULL, 0 ) == 0 );
+
+    TEST_TIMECONST( timeconst_mpi_shift, mbedtls_mpi_shift_l );
+    TEST_TIMECONST( timeconst_mpi_shift, mbedtls_mpi_shift_r );
+
+    TEST_TIMECONST( timeconst_mpi_mpi, mbedtls_mpi_add_abs );
+    TEST_TIMECONST( timeconst_mpi_mpi, mbedtls_mpi_sub_abs );
+    TEST_TIMECONST( timeconst_mpi_mpi, mbedtls_mpi_add_mpi );
+    TEST_TIMECONST( timeconst_mpi_mpi, mbedtls_mpi_sub_mpi );
+    TEST_TIMECONST( timeconst_mpi_mpi, mbedtls_mpi_mul_mpi );
+    TEST_TIMECONST( timeconst_mpi_mpi, mbedtls_mpi_mod_mpi );
+
+    TEST_TIMECONST( timeconst_mpi_int, mbedtls_mpi_add_int );
+    TEST_TIMECONST( timeconst_mpi_int, mbedtls_mpi_sub_int );
+
+    TEST_TIMECONST( timeconst_mpi_div_int, mbedtls_mpi_div_int );
+    TEST_TIMECONST( timeconst_mpi_mod_int, mbedtls_mpi_mod_int );
+
+    TEST_TIMECONST( timeconst_mpi_div_mpi, mbedtls_mpi_div_mpi );
+    TEST_TIMECONST( timeconst_mpi_mul_int, mbedtls_mpi_mul_int );
+
+exit:
+    mbedtls_ctr_drbg_free( &ctr_drbg );
+}
+
+int timeconst_mpi_mul_int( int samples, int mpi_size,
+                           mbedtls_ctr_drbg_context *ctr_drbg,
+                           int (*fut)(mbedtls_mpi *, const mbedtls_mpi *, mbedtls_mpi_uint) )
+{
+    int i;
+    int ret;
+    mbedtls_mpi A, X;
+    mbedtls_mpi_uint b;
+    unsigned long start_time, end_time;
+    unsigned long max, min;
+    double mean, variance;
+    mbedtls_timeconst_context timeconst;
+
+    mbedtls_timeconst_init( &timeconst );
+    mbedtls_mpi_init( &A );
+    mbedtls_mpi_init( &X );
+
+    mbedtls_timeconst_setup( &timeconst, (size_t)samples );
+
+    for( i = 0; i < samples; i++ )
+    {
+        ret = mbedtls_mpi_fill_random( &A, (size_t)mpi_size,
+                                       mbedtls_ctr_drbg_random, ctr_drbg );
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_ctr_drbg_random( ctr_drbg, (unsigned char *)&b,
+                                       sizeof( mbedtls_mpi_uint ) );
+        if( ret != 0 )
+            goto exit;
+
+        start_time = mbedtls_timing_hardclock();
+        ret = fut( &X, &A, b );
+        end_time = mbedtls_timing_hardclock();
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_timeconst_add_sample( &timeconst, end_time - start_time );
+        if( ret != 0 )
+            goto exit;
+    }
+
+    mean = mbedtls_timeconst_get_mean( &timeconst );
+    variance = mbedtls_timeconst_get_variance( &timeconst );
+    min = mbedtls_timeconst_min_sample( &timeconst );
+    max = mbedtls_timeconst_max_sample( &timeconst );
+
+    mbedtls_printf( "mean: %f, variance: %f, min: %lu, max: %lu\n",
+                    mean, variance, min, max );
+
+exit:
+    mbedtls_mpi_free( &A );
+    mbedtls_mpi_free( &X );
+    mbedtls_timeconst_free( &timeconst );
+
+    return( ret );
+}
+
+int timeconst_mpi_div_mpi( int samples, int mpi_size,
+                           mbedtls_ctr_drbg_context *ctr_drbg,
+                           int (*fut)(mbedtls_mpi *, mbedtls_mpi *, const mbedtls_mpi *, const mbedtls_mpi *) )
+{
+    int i;
+    int ret;
+    mbedtls_mpi Q, R, A, B;
+    unsigned long start_time, end_time;
+    unsigned long max, min;
+    double mean, variance;
+    mbedtls_timeconst_context timeconst;
+
+    mbedtls_timeconst_init( &timeconst );
+    mbedtls_mpi_init( &Q );
+    mbedtls_mpi_init( &R );
+    mbedtls_mpi_init( &A );
+    mbedtls_mpi_init( &B );
+
+    mbedtls_timeconst_setup( &timeconst, (size_t)samples );
+
+    for( i = 0; i < samples; i++ )
+    {
+        ret = mbedtls_mpi_fill_random( &A, (size_t)mpi_size,
+                                       mbedtls_ctr_drbg_random, ctr_drbg );
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_mpi_fill_random( &B, (size_t)mpi_size,
+                                       mbedtls_ctr_drbg_random, ctr_drbg );
+        if( ret != 0 )
+            goto exit;
+
+        if( mbedtls_mpi_cmp_int( &B, 0 ) == 0 )
+        {
+            i--;
+            continue;
+        }
+
+        start_time = mbedtls_timing_hardclock();
+        ret = fut( &Q, &R, &A, &B );
+        end_time = mbedtls_timing_hardclock();
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_timeconst_add_sample( &timeconst, end_time - start_time );
+        if( ret != 0 )
+            goto exit;
+    }
+
+    mean = mbedtls_timeconst_get_mean( &timeconst );
+    variance = mbedtls_timeconst_get_variance( &timeconst );
+    min = mbedtls_timeconst_min_sample( &timeconst );
+    max = mbedtls_timeconst_max_sample( &timeconst );
+
+    mbedtls_printf( "mean: %f, variance: %f, min: %lu, max: %lu\n",
+                    mean, variance, min, max );
+
+exit:
+    mbedtls_mpi_free( &Q );
+    mbedtls_mpi_free( &R );
+    mbedtls_mpi_free( &A );
+    mbedtls_mpi_free( &B );
+    mbedtls_timeconst_free( &timeconst );
+
+    return( ret );
+}
+
+int timeconst_mpi_mod_int( int samples, int mpi_size,
+                           mbedtls_ctr_drbg_context *ctr_drbg,
+                           int (*fut)(mbedtls_mpi_uint *, const mbedtls_mpi *, mbedtls_mpi_sint) )
+{
+    int i;
+    int ret;
+    mbedtls_mpi A;
+    mbedtls_mpi_sint b;
+    mbedtls_mpi_uint r;
+    unsigned long start_time, end_time;
+    unsigned long max, min;
+    double mean, variance;
+    mbedtls_timeconst_context timeconst;
+
+    mbedtls_timeconst_init( &timeconst );
+    mbedtls_mpi_init( &A );
+
+    mbedtls_timeconst_setup( &timeconst, (size_t)samples );
+
+    for( i = 0; i < samples; i++ )
+    {
+        ret = mbedtls_mpi_fill_random( &A, (size_t)mpi_size,
+                                       mbedtls_ctr_drbg_random, ctr_drbg );
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_ctr_drbg_random( ctr_drbg, (unsigned char *)&b,
+                                       sizeof( mbedtls_mpi_sint ) );
+        if( ret != 0 )
+            goto exit;
+
+        if( b <= 0 )
+        {
+            i--;
+            continue;
+        }
+
+        start_time = mbedtls_timing_hardclock();
+        ret = fut( &r, &A, b );
+        end_time = mbedtls_timing_hardclock();
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_timeconst_add_sample( &timeconst, end_time - start_time );
+        if( ret != 0 )
+            goto exit;
+    }
+
+    mean = mbedtls_timeconst_get_mean( &timeconst );
+    variance = mbedtls_timeconst_get_variance( &timeconst );
+    min = mbedtls_timeconst_min_sample( &timeconst );
+    max = mbedtls_timeconst_max_sample( &timeconst );
+
+    mbedtls_printf( "mean: %f, variance: %f, min: %lu, max: %lu\n",
+                    mean, variance, min, max );
+
+exit:
+    mbedtls_mpi_free( &A );
+    mbedtls_timeconst_free( &timeconst );
+
+    return( ret );
+}
+
+int timeconst_mpi_div_int( int samples, int mpi_size,
+                           mbedtls_ctr_drbg_context *ctr_drbg,
+                           int (*fut)(mbedtls_mpi *, mbedtls_mpi *, const mbedtls_mpi *, mbedtls_mpi_sint) )
+{
+    int i;
+    int ret;
+    mbedtls_mpi Q, R, A;
+    mbedtls_mpi_sint b;
+    unsigned long start_time, end_time;
+    unsigned long max, min;
+    double mean, variance;
+    mbedtls_timeconst_context timeconst;
+
+    mbedtls_timeconst_init( &timeconst );
+    mbedtls_mpi_init( &Q );
+    mbedtls_mpi_init( &R );
+    mbedtls_mpi_init( &A );
+
+    mbedtls_timeconst_setup( &timeconst, (size_t)samples );
+
+    for( i = 0; i < samples; i++ )
+    {
+        ret = mbedtls_mpi_fill_random( &A, (size_t)mpi_size,
+                                       mbedtls_ctr_drbg_random, ctr_drbg );
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_ctr_drbg_random( ctr_drbg, (unsigned char *)&b,
+                                       sizeof( mbedtls_mpi_sint ) );
+        if( ret != 0 )
+            goto exit;
+
+        if( b == 0 )
+        {
+            i--;
+            continue;
+        }
+
+        start_time = mbedtls_timing_hardclock();
+        ret = fut( &Q, &R, &A, b );
+        end_time = mbedtls_timing_hardclock();
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_timeconst_add_sample( &timeconst, end_time - start_time );
+        if( ret != 0 )
+            goto exit;
+    }
+
+    mean = mbedtls_timeconst_get_mean( &timeconst );
+    variance = mbedtls_timeconst_get_variance( &timeconst );
+    min = mbedtls_timeconst_min_sample( &timeconst );
+    max = mbedtls_timeconst_max_sample( &timeconst );
+
+    mbedtls_printf( "mean: %f, variance: %f, min: %lu, max: %lu\n",
+                    mean, variance, min, max );
+
+exit:
+    mbedtls_mpi_free( &Q );
+    mbedtls_mpi_free( &R );
+    mbedtls_mpi_free( &A );
+    mbedtls_timeconst_free( &timeconst );
+
+    return( ret );
+}
+
+int timeconst_mpi_int( int samples, int mpi_size,
+                       mbedtls_ctr_drbg_context *ctr_drbg,
+                       int (*fut)(mbedtls_mpi *, const mbedtls_mpi *, mbedtls_mpi_sint) )
+{
+    int i;
+    int ret;
+    mbedtls_mpi res, op1;
+    mbedtls_mpi_sint op2;
+    unsigned long start_time, end_time;
+    unsigned long max, min;
+    double mean, variance;
+    mbedtls_timeconst_context timeconst;
+
+    mbedtls_timeconst_init( &timeconst );
+    mbedtls_mpi_init( &res );
+    mbedtls_mpi_init( &op1 );
+
+    mbedtls_timeconst_setup( &timeconst, (size_t)samples );
+
+    for( i = 0; i < samples; i++ )
+    {
+        ret = mbedtls_mpi_fill_random( &op1, (size_t)mpi_size,
+                                       mbedtls_ctr_drbg_random, ctr_drbg );
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_ctr_drbg_random( ctr_drbg, (unsigned char *)&op2,
+                                       sizeof( mbedtls_mpi_sint ) );
+        if( ret != 0 )
+            goto exit;
+
+        start_time = mbedtls_timing_hardclock();
+        ret = fut( &res, &op1, op2 );
+        end_time = mbedtls_timing_hardclock();
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_timeconst_add_sample( &timeconst, end_time - start_time );
+        if( ret != 0 )
+            goto exit;
+    }
+
+    mean = mbedtls_timeconst_get_mean( &timeconst );
+    variance = mbedtls_timeconst_get_variance( &timeconst );
+    min = mbedtls_timeconst_min_sample( &timeconst );
+    max = mbedtls_timeconst_max_sample( &timeconst );
+
+    mbedtls_printf( "mean: %f, variance: %f, min: %lu, max: %lu\n",
+                    mean, variance, min, max );
+
+exit:
+    mbedtls_mpi_free( &res );
+    mbedtls_mpi_free( &op1 );
+    mbedtls_timeconst_free( &timeconst );
+
+    return( ret );
+}
+
+int timeconst_mpi_mpi( int samples, int mpi_size,
+                       mbedtls_ctr_drbg_context *ctr_drbg,
+                       int (*fut)(mbedtls_mpi *, const mbedtls_mpi *, const mbedtls_mpi *) )
+{
+    int i;
+    int ret;
+    mbedtls_mpi res, op1, op2;
+    unsigned long start_time, end_time;
+    unsigned long min, max;
+    double mean, variance;
+    mbedtls_timeconst_context timeconst;
+
+    mbedtls_timeconst_init( &timeconst );
+    mbedtls_mpi_init( &res );
+    mbedtls_mpi_init( &op1 );
+    mbedtls_mpi_init( &op2 );
+
+    mbedtls_timeconst_setup( &timeconst, (size_t)samples );
+
+    for( i = 0; i < samples; i++ )
+    {
+        ret = mbedtls_mpi_fill_random( &op1, (size_t)mpi_size,
+                                       mbedtls_ctr_drbg_random, ctr_drbg );
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_mpi_fill_random( &op2, (size_t)mpi_size,
+                                       mbedtls_ctr_drbg_random, ctr_drbg );
+        if( ret != 0 )
+            goto exit;
+
+        if( mbedtls_mpi_cmp_int( &op1, 0 ) == 0 ||
+            mbedtls_mpi_cmp_int( &op2, 0 ) == 0 )
+        {
+            i--;
+            continue;
+        }
+        else if( mbedtls_mpi_cmp_abs( &op1, &op2 )  < 0 )
+        {
+            start_time = mbedtls_timing_hardclock();
+            ret = fut( &res, &op2, &op1 );
+            end_time = mbedtls_timing_hardclock();
+        }
+        else
+        {
+            start_time = mbedtls_timing_hardclock();
+            ret = fut( &res, &op1, &op2 );
+            end_time = mbedtls_timing_hardclock();
+        }
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_timeconst_add_sample( &timeconst, end_time - start_time );
+        if( ret != 0 )
+            goto exit;
+    }
+
+    mean = mbedtls_timeconst_get_mean( &timeconst );
+    variance = mbedtls_timeconst_get_variance( &timeconst );
+    min = mbedtls_timeconst_min_sample( &timeconst );
+    max = mbedtls_timeconst_max_sample( &timeconst );
+
+    mbedtls_printf( "mean: %f, variance: %f, min: %lu, max: %lu\n",
+                    mean, variance, min, max );
+
+exit:
+    mbedtls_mpi_free( &res );
+    mbedtls_mpi_free( &op1 );
+    mbedtls_mpi_free( &op2 );
+    mbedtls_timeconst_free( &timeconst );
+
+    return( ret );
+}
+
+int timeconst_mpi_shift( int samples, int mpi_size,
+                         mbedtls_ctr_drbg_context *ctr_drbg,
+                         int (*fut)(mbedtls_mpi *, size_t) )
+{
+    int i;
+    int ret;
+    mbedtls_mpi X;
+    size_t shift_cnt;
+    unsigned long start_time, end_time;
+    unsigned long min, max;
+    double mean, variance;
+    mbedtls_timeconst_context timeconst;
+
+    mbedtls_timeconst_init( &timeconst );
+    mbedtls_mpi_init( &X );
+
+    mbedtls_timeconst_setup( &timeconst, (size_t)samples );
+
+    for( i = 0; i < samples; i++ )
+    {
+        ret = mbedtls_mpi_fill_random( &X, (size_t)mpi_size,
+                                       mbedtls_ctr_drbg_random, ctr_drbg );
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_ctr_drbg_random( ctr_drbg, (unsigned char *)&shift_cnt,
+                                       sizeof( size_t ) );
+        if( ret != 0 )
+            goto exit;
+        shift_cnt = shift_cnt % ( mpi_size * 8 + 1 );
+
+        start_time = mbedtls_timing_hardclock();
+        ret = fut( &X, shift_cnt );
+        end_time = mbedtls_timing_hardclock();
+        if( ret != 0 )
+            goto exit;
+
+        ret = mbedtls_timeconst_add_sample( &timeconst, end_time - start_time );
+        if( ret != 0 )
+            goto exit;
+    }
+
+    mean = mbedtls_timeconst_get_mean( &timeconst );
+    variance = mbedtls_timeconst_get_variance( &timeconst );
+    min = mbedtls_timeconst_min_sample( &timeconst );
+    max = mbedtls_timeconst_max_sample( &timeconst );
+
+    mbedtls_printf( "mean: %f, variance: %f, min: %lu, max: %lu\n",
+                    mean, variance, min, max );
+
+exit:
+    mbedtls_mpi_free( &X );
+    mbedtls_timeconst_free( &timeconst );
+
+    return( ret );
+}
+/* END_CASE */
