@@ -11,59 +11,59 @@
 int timeconst_mpi_shift( int samples, int mpi_size,
                          mbedtls_ctr_drbg_context *ctr_drbg,
                          int (*fut)(mbedtls_mpi *, size_t),
-                         const char *fut_str, unsigned long time_adj );
+                         const char *fut_str, unsigned long long time_adj );
 
 int timeconst_mpi_mpi( int samples, int mpi_size,
                        mbedtls_ctr_drbg_context *ctr_drbg,
                        int (*fut)(mbedtls_mpi *, const mbedtls_mpi *,
                                   const mbedtls_mpi *),
-                       const char *fut_str, unsigned long time_adj );
+                       const char *fut_str, unsigned long long time_adj );
 
 int timeconst_mpi_int( int samples, int mpi_size,
                        mbedtls_ctr_drbg_context *ctr_drbg,
                        int (*fut)(mbedtls_mpi *, const mbedtls_mpi *,
                                   mbedtls_mpi_sint),
-                       const char *fut_str, unsigned long time_adj );
+                       const char *fut_str, unsigned long long time_adj );
 
 int timeconst_mpi_div_int( int samples, int mpi_size,
                            mbedtls_ctr_drbg_context *ctr_drbg,
                            int (*fut)(mbedtls_mpi *, mbedtls_mpi *,
                                       const mbedtls_mpi *,
                                       mbedtls_mpi_sint),
-                           const char *fut_str, unsigned long time_adj );
+                           const char *fut_str, unsigned long long time_adj );
 
 int timeconst_mpi_mod_int( int samples, int mpi_size,
                            mbedtls_ctr_drbg_context *ctr_drbg,
                            int (*fut)(mbedtls_mpi_uint *, const mbedtls_mpi *,
                                       mbedtls_mpi_sint),
-                           const char *fut_str, unsigned long time_adj );
+                           const char *fut_str, unsigned long long time_adj );
 
 int timeconst_mpi_div_mpi( int samples, int mpi_size,
                            mbedtls_ctr_drbg_context *ctr_drbg,
                            int (*fut)(mbedtls_mpi *, mbedtls_mpi *,
                                       const mbedtls_mpi *, const mbedtls_mpi *),
-                           const char *fut_str, unsigned long time_adj );
+                           const char *fut_str, unsigned long long time_adj );
 
 int timeconst_mpi_mul_int( int samples, int mpi_size,
                            mbedtls_ctr_drbg_context *ctr_drbg,
                            int (*fut)(mbedtls_mpi *, const mbedtls_mpi *,
                                       mbedtls_mpi_uint),
-                           const char *fut_str, unsigned long time_adj );
+                           const char *fut_str, unsigned long long time_adj );
 
 int timeconst_mpi_exp_mod( int samples, int mpi_size,
                            mbedtls_ctr_drbg_context *ctr_drbg,
                            int (*fut)(mbedtls_mpi *, const mbedtls_mpi *,
                                       const mbedtls_mpi *, const mbedtls_mpi *,
                                       mbedtls_mpi *),
-                           const char *fut_str, unsigned long time_adj );
+                           const char *fut_str, unsigned long long time_adj );
 
-unsigned long timeconst_calibrate_clock( unsigned long (*f_clock)(void) );
+unsigned long long timeconst_calibrate_clock( unsigned long long (*f_clock)(void) );
 
 int timeconst_increase_priority();
 
 #define TIMECONST_STATS(ctx,fut_str)                                        \
 {                                                                           \
-    unsigned long max, min;                                                 \
+    unsigned long long max, min;                                            \
     double mean, variance, std_dev, median;                                 \
     mean = mbedtls_timeconst_get_mean( ctx );                               \
     median = mbedtls_timeconst_get_median( ctx );                           \
@@ -72,12 +72,15 @@ int timeconst_increase_priority();
     min = mbedtls_timeconst_min_sample( ctx );                              \
     max = mbedtls_timeconst_max_sample( ctx );                              \
                                                                             \
-    mbedtls_printf( "%-21s%30.2f%30.2f%30.2f%30lu%30lu\n",                  \
+    mbedtls_printf( "%-30s%30.2f%30.2f%30.2f%30llu%30llu\n",                \
                     fut_str, median, mean, std_dev, min, max );             \
                                                                             \
     if( ( ret = mbedtls_timeconst_write_file( ctx, fut_str ) ) != 0 )       \
         goto exit;                                                          \
 }
+
+#define TIMECONST_TIMEDIFF(start,end,adj)                                   \
+    (end - start < adj) ? 0 : end - start - adj
 /* END_HEADER */
 
 /* BEGIN_DEPENDENCIES
@@ -89,10 +92,10 @@ int timeconst_increase_priority();
 void timeconst_mpi( int samples, int mpi_size )
 {
     mbedtls_ctr_drbg_context ctr_drbg;
-    unsigned long time_adj;
+    unsigned long long time_adj;
 
     mbedtls_ctr_drbg_init( &ctr_drbg );
-    time_adj = timeconst_calibrate_clock( mbedtls_timing_hardclock );
+    time_adj = timeconst_calibrate_clock( mbedtls_timing_threadclock );
     TEST_ASSERT( timeconst_increase_priority() == 0 );
 
     TEST_ASSERT( mbedtls_ctr_drbg_seed( &ctr_drbg, myrand, NULL, NULL, 0 ) == 0 );
@@ -149,12 +152,12 @@ int timeconst_increase_priority()
     return sched_setscheduler( 0, SCHED_FIFO, &p );
 }
 
-unsigned long timeconst_calibrate_clock( unsigned long (*f_clock)(void) )
+unsigned long long timeconst_calibrate_clock( unsigned long long (*f_clock)(void) )
 {
-    size_t samples;
-    unsigned long start_time;
-    unsigned long end_time;
-    unsigned long acc = 0;
+    unsigned long long samples;
+    unsigned long long start_time;
+    unsigned long long end_time;
+    unsigned long long acc = 0;
 
     for( samples = 0; samples < 1000; samples++ )
     {
@@ -163,7 +166,7 @@ unsigned long timeconst_calibrate_clock( unsigned long (*f_clock)(void) )
         acc += end_time - start_time;
     }
 
-    return( acc / (unsigned long)samples );
+    return( acc / samples );
 }
 
 int timeconst_random( void *p_rng, unsigned char *output, size_t output_len )
@@ -186,12 +189,12 @@ int timeconst_mpi_exp_mod( int samples, int mpi_size,
                            int (*fut)(mbedtls_mpi *, const mbedtls_mpi *,
                                       const mbedtls_mpi *, const mbedtls_mpi *,
                                       mbedtls_mpi *),
-                           const char *fut_str, unsigned long time_adj )
+                           const char *fut_str, unsigned long long time_adj )
 {
     int i;
     int ret;
     mbedtls_mpi X, A, E, N, _RR;
-    unsigned long start_time, end_time;
+    unsigned long long start_time, end_time;
     mbedtls_timeconst_context timeconst;
 
     mbedtls_timeconst_init( &timeconst );
@@ -227,14 +230,14 @@ int timeconst_mpi_exp_mod( int samples, int mpi_size,
         if( ret != 0 )
             goto exit;
 
-        start_time = mbedtls_timing_hardclock();
+        start_time = mbedtls_timing_threadclock();
         ret = fut( &X, &A, &E, &N, &_RR );
-        end_time = mbedtls_timing_hardclock();
+        end_time = mbedtls_timing_threadclock();
         if( ret != 0 )
             goto exit;
 
         ret = mbedtls_timeconst_add_sample( &timeconst,
-                                            end_time - start_time - time_adj);
+                                            TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) );
         if( ret != 0 )
             goto exit;
     }
@@ -256,13 +259,13 @@ int timeconst_mpi_mul_int( int samples, int mpi_size,
                            mbedtls_ctr_drbg_context *ctr_drbg,
                            int (*fut)(mbedtls_mpi *, const mbedtls_mpi *,
                                       mbedtls_mpi_uint),
-                           const char *fut_str, unsigned long time_adj )
+                           const char *fut_str, unsigned long long time_adj )
 {
     int i;
     int ret;
     mbedtls_mpi A, X;
     mbedtls_mpi_uint b;
-    unsigned long start_time, end_time;
+    unsigned long long start_time, end_time;
     mbedtls_timeconst_context timeconst;
 
     mbedtls_timeconst_init( &timeconst );
@@ -283,14 +286,14 @@ int timeconst_mpi_mul_int( int samples, int mpi_size,
         if( ret != 0 )
             goto exit;
 
-        start_time = mbedtls_timing_hardclock();
+        start_time = mbedtls_timing_threadclock();
         ret = fut( &X, &A, b );
-        end_time = mbedtls_timing_hardclock();
+        end_time = mbedtls_timing_threadclock();
         if( ret != 0 )
             goto exit;
 
         ret = mbedtls_timeconst_add_sample( &timeconst,
-                                            end_time - start_time - time_adj );
+                                            TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) );
         if( ret != 0 )
             goto exit;
     }
@@ -309,12 +312,12 @@ int timeconst_mpi_div_mpi( int samples, int mpi_size,
                            mbedtls_ctr_drbg_context *ctr_drbg,
                            int (*fut)(mbedtls_mpi *, mbedtls_mpi *,
                                       const mbedtls_mpi *, const mbedtls_mpi *),
-                           const char *fut_str, unsigned long time_adj )
+                           const char *fut_str, unsigned long long time_adj )
 {
     int i;
     int ret;
     mbedtls_mpi Q, R, A, B;
-    unsigned long start_time, end_time;
+    unsigned long long start_time, end_time;
     mbedtls_timeconst_context timeconst;
 
     mbedtls_timeconst_init( &timeconst );
@@ -343,14 +346,14 @@ int timeconst_mpi_div_mpi( int samples, int mpi_size,
             continue;
         }
 
-        start_time = mbedtls_timing_hardclock();
+        start_time = mbedtls_timing_threadclock();
         ret = fut( &Q, &R, &A, &B );
-        end_time = mbedtls_timing_hardclock();
+        end_time = mbedtls_timing_threadclock();
         if( ret != 0 )
             goto exit;
 
         ret = mbedtls_timeconst_add_sample( &timeconst,
-                                            end_time - start_time - time_adj );
+                                            TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) );
         if( ret != 0 )
             goto exit;
     }
@@ -371,14 +374,14 @@ int timeconst_mpi_mod_int( int samples, int mpi_size,
                            mbedtls_ctr_drbg_context *ctr_drbg,
                            int (*fut)(mbedtls_mpi_uint *, const mbedtls_mpi *,
                                       mbedtls_mpi_sint),
-                           const char *fut_str, unsigned long time_adj )
+                           const char *fut_str, unsigned long long time_adj )
 {
     int i;
     int ret;
     mbedtls_mpi A;
     mbedtls_mpi_sint b;
     mbedtls_mpi_uint r;
-    unsigned long start_time, end_time;
+    unsigned long long start_time, end_time;
     mbedtls_timeconst_context timeconst;
 
     mbedtls_timeconst_init( &timeconst );
@@ -404,14 +407,14 @@ int timeconst_mpi_mod_int( int samples, int mpi_size,
             continue;
         }
 
-        start_time = mbedtls_timing_hardclock();
+        start_time = mbedtls_timing_threadclock();
         ret = fut( &r, &A, b );
-        end_time = mbedtls_timing_hardclock();
+        end_time = mbedtls_timing_threadclock();
         if( ret != 0 )
             goto exit;
 
         ret = mbedtls_timeconst_add_sample( &timeconst,
-                                            end_time - start_time - time_adj );
+                                            TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) );
         if( ret != 0 )
             goto exit;
     }
@@ -429,13 +432,13 @@ int timeconst_mpi_div_int( int samples, int mpi_size,
                            mbedtls_ctr_drbg_context *ctr_drbg,
                            int (*fut)(mbedtls_mpi *, mbedtls_mpi *,
                                       const mbedtls_mpi *, mbedtls_mpi_sint),
-                           const char *fut_str, unsigned long time_adj )
+                           const char *fut_str, unsigned long long time_adj )
 {
     int i;
     int ret;
     mbedtls_mpi Q, R, A;
     mbedtls_mpi_sint b;
-    unsigned long start_time, end_time;
+    unsigned long long start_time, end_time;
     mbedtls_timeconst_context timeconst;
 
     mbedtls_timeconst_init( &timeconst );
@@ -463,14 +466,14 @@ int timeconst_mpi_div_int( int samples, int mpi_size,
             continue;
         }
 
-        start_time = mbedtls_timing_hardclock();
+        start_time = mbedtls_timing_threadclock();
         ret = fut( &Q, &R, &A, b );
-        end_time = mbedtls_timing_hardclock();
+        end_time = mbedtls_timing_threadclock();
         if( ret != 0 )
             goto exit;
 
         ret = mbedtls_timeconst_add_sample( &timeconst,
-                                            end_time - start_time - time_adj );
+                                            TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) );
         if( ret != 0 )
             goto exit;
     }
@@ -490,13 +493,13 @@ int timeconst_mpi_int( int samples, int mpi_size,
                        mbedtls_ctr_drbg_context *ctr_drbg,
                        int (*fut)(mbedtls_mpi *, const mbedtls_mpi *,
                                   mbedtls_mpi_sint),
-                       const char *fut_str, unsigned long time_adj )
+                       const char *fut_str, unsigned long long time_adj )
 {
     int i;
     int ret;
     mbedtls_mpi res, op1;
     mbedtls_mpi_sint op2;
-    unsigned long start_time, end_time;
+    unsigned long long start_time, end_time;
     mbedtls_timeconst_context timeconst;
 
     mbedtls_timeconst_init( &timeconst );
@@ -517,14 +520,14 @@ int timeconst_mpi_int( int samples, int mpi_size,
         if( ret != 0 )
             goto exit;
 
-        start_time = mbedtls_timing_hardclock();
+        start_time = mbedtls_timing_threadclock();
         ret = fut( &res, &op1, op2 );
-        end_time = mbedtls_timing_hardclock();
+        end_time = mbedtls_timing_threadclock();
         if( ret != 0 )
             goto exit;
 
         ret = mbedtls_timeconst_add_sample( &timeconst,
-                                            end_time - start_time - time_adj );
+                                            TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) );
         if( ret != 0 )
             goto exit;
     }
@@ -543,12 +546,12 @@ int timeconst_mpi_mpi( int samples, int mpi_size,
                        mbedtls_ctr_drbg_context *ctr_drbg,
                        int (*fut)(mbedtls_mpi *, const mbedtls_mpi *,
                                   const mbedtls_mpi *),
-                       const char *fut_str, unsigned long time_adj )
+                       const char *fut_str, unsigned long long time_adj )
 {
     int i;
     int ret;
     mbedtls_mpi res, op1, op2;
-    unsigned long start_time, end_time;
+    unsigned long long start_time, end_time;
     mbedtls_timeconst_context timeconst;
 
     mbedtls_timeconst_init( &timeconst );
@@ -578,21 +581,21 @@ int timeconst_mpi_mpi( int samples, int mpi_size,
         }
         else if( mbedtls_mpi_cmp_abs( &op1, &op2 )  < 0 )
         {
-            start_time = mbedtls_timing_hardclock();
+            start_time = mbedtls_timing_threadclock();
             ret = fut( &res, &op2, &op1 );
-            end_time = mbedtls_timing_hardclock();
+            end_time = mbedtls_timing_threadclock();
         }
         else
         {
-            start_time = mbedtls_timing_hardclock();
+            start_time = mbedtls_timing_threadclock();
             ret = fut( &res, &op1, &op2 );
-            end_time = mbedtls_timing_hardclock();
+            end_time = mbedtls_timing_threadclock();
         }
         if( ret != 0 )
             goto exit;
 
         ret = mbedtls_timeconst_add_sample( &timeconst,
-                                            end_time - start_time - time_adj );
+                                            TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) );
         if( ret != 0 )
             goto exit;
     }
@@ -611,13 +614,13 @@ exit:
 int timeconst_mpi_shift( int samples, int mpi_size,
                          mbedtls_ctr_drbg_context *ctr_drbg,
                          int (*fut)(mbedtls_mpi *, size_t),
-                         const char *fut_str, unsigned long time_adj )
+                         const char *fut_str, unsigned long long time_adj )
 {
     int i;
     int ret;
     mbedtls_mpi X;
     size_t shift_cnt;
-    unsigned long start_time, end_time;
+    unsigned long long start_time, end_time;
     mbedtls_timeconst_context timeconst;
 
     mbedtls_timeconst_init( &timeconst );
@@ -638,14 +641,14 @@ int timeconst_mpi_shift( int samples, int mpi_size,
             goto exit;
         shift_cnt = shift_cnt % ( mpi_size * 8 + 1 );
 
-        start_time = mbedtls_timing_hardclock();
+        start_time = mbedtls_timing_threadclock();
         ret = fut( &X, shift_cnt );
-        end_time = mbedtls_timing_hardclock();
+        end_time = mbedtls_timing_threadclock();
         if( ret != 0 )
             goto exit;
 
         ret = mbedtls_timeconst_add_sample( &timeconst,
-                                            end_time - start_time - time_adj );
+                                            TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) );
         if( ret != 0 )
             goto exit;
     }

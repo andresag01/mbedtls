@@ -355,6 +355,26 @@ int mbedtls_timing_get_delay( void *data )
     return( 0 );
 }
 
+/*
+ * Get the thread time
+ */
+unsigned long long mbedtls_timing_threadclock( void )
+{
+    struct timespec time;
+    unsigned long long nsec_time;
+
+    clock_gettime( CLOCK_THREAD_CPUTIME_ID, &time );
+
+    /*
+     * Convert struct timespec to a 64-bit time value in nanoseconds since
+     * epoch
+     */
+    nsec_time = ( (unsigned long long)time.tv_sec ) * 1000000000ULL;
+    nsec_time += (unsigned long long)time.tv_nsec;
+
+    return( nsec_time );
+}
+
 #endif /* !MBEDTLS_TIMING_ALT */
 
 #if defined(MBEDTLS_SELF_TEST)
