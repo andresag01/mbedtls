@@ -410,6 +410,16 @@ typedef struct
 }
 mbedtls_timeconst_context;
 
+int mbedtls_timeconst_samplecmp( const void *p1, const void *p2 )
+{
+    if( *(unsigned long *)p1 < *(unsigned long *)p2 )
+        return( -1 );
+    else if( *(unsigned long *)p1 > *(unsigned long *)p2 )
+        return( 1 );
+    else
+        return( 0 );
+}
+
 void mbedtls_timeconst_init( mbedtls_timeconst_context *ctx )
 {
     memset( ctx, 0x00, sizeof( mbedtls_timeconst_context ) );
@@ -492,6 +502,52 @@ double mbedtls_timeconst_get_variance( mbedtls_timeconst_context *ctx )
                ( ( (double)ctx->samples[i] ) - mean );
 
     return( acc / ( (double)ctx->num_samples ) );
+}
+
+double mbedtls_timeconst_get_median( mbedtls_timeconst_context *ctx )
+{
+    double s1, s2;
+
+    qsort( ctx->samples, ctx->num_samples, sizeof( unsigned long ),
+           mbedtls_timeconst_samplecmp );
+    if ( ctx->num_samples % 2 )
+    {
+        /* Return the middle value */
+        return( (double)ctx->samples[ctx->num_samples / 2] );
+    }
+    else
+    {
+        /* Calculate the average of the two values in the middle */
+        s1 = (double)ctx->samples[ctx->num_samples / 2];
+        s2 = (double)ctx->samples[ctx->num_samples / 2 - 1];
+        return( ( s1 + s2 ) / 2 );
+    }
+}
+
+int mbedtls_timeconst_write_file( mbedtls_timeconst_context *ctx,
+                                   const char *filename )
+{
+    size_t i;
+    FILE* fp;
+    char filepath[256];
+
+    mbedtls_snprintf( filepath, sizeof( filepath ),
+                      "./timeconst_results/%s.txt", filename );
+
+    fp = fopen( filepath, "w" );
+    if( fp == NULL )
+    {
+        return( 1 );
+    }
+
+    for( i = 0; i < ctx->num_samples; i++ )
+    {
+        fprintf( fp, "%lu\n", ctx->samples[i] );
+    }
+
+    fclose( fp );
+
+    return( 0 );
 }
 
 void mbedtls_timeconst_free( mbedtls_timeconst_context *ctx )
