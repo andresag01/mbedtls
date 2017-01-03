@@ -15,18 +15,25 @@ def distro(plots_dir, filenames):
 
     for filename in filenames:
         with open(filename, "r") as istream:
+            name = os.path.basename(os.path.splitext(filename)[0])
+
             samples = []
             for line in istream.readlines():
                 samples.append(int(line.strip()))
             samples = sorted(samples)
 
             fig, ax = plt.subplots()
-            ax.hist(samples, bins=100)
+            hist = ax.hist(samples, bins=100)
+
+            ax.set_yscale("log")
+
+            ax.set_title("Runtime histogram for {0}".format(name))
+            ax.set_xlabel("Runtime (nsecs)")
+            ax.set_ylabel("Number of samples")
 
             plt.tight_layout()
             plt.grid(True)
-            plt.savefig(os.path.join(plots_dir, "{0}.png".format(
-                        os.path.basename(os.path.splitext(filename)[0]))))
+            plt.savefig(os.path.join(plots_dir, "{0}.png".format(name)))
 
 def scatter(plots_dir, filenames):
     filenames = filenames.split(",")
@@ -55,6 +62,10 @@ def scatter(plots_dir, filenames):
     handles.append(ax.scatter(samples[0], samples[1]))
     ax.set_xticks(range(0, processed_files))
     ax.set_xticklabels(xticks, rotation='vertical')
+
+    ax.set_title("Runtime scatter plot for mbed TLS functions")
+    ax.set_xlabel("Function")
+    ax.set_ylabel("Runtime (nsecs)")
 
     # Plot means
     handles.append(ax.scatter(means[0], means[1], color="red"))
