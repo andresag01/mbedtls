@@ -480,7 +480,7 @@ double mbedtls_timeconst_get_mean( mbedtls_timeconst_context *ctx )
 
     /* Avoid division by 0 */
     if( ctx->num_samples == 0 )
-        return -1.0;
+        return( -1.0 );
 
     for( i = 0; i < ctx->num_samples; i++ )
         acc += (double)ctx->samples[i];
@@ -494,7 +494,7 @@ double mbedtls_timeconst_get_variance( mbedtls_timeconst_context *ctx )
     double mean = mbedtls_timeconst_get_mean( ctx );
     double acc = 0.0;
 
-    if( mean < 0.0 )
+    if( ctx->num_samples == 0 || mean < 0.0 )
         return( -1.0 );
 
     for( i = 0; i < ctx->num_samples; i++ )
@@ -507,6 +507,9 @@ double mbedtls_timeconst_get_variance( mbedtls_timeconst_context *ctx )
 double mbedtls_timeconst_get_median( mbedtls_timeconst_context *ctx )
 {
     double s1, s2;
+
+    if( ctx->num_samples == 0 )
+        return( -1.0 );
 
     qsort( ctx->samples, ctx->num_samples, sizeof( unsigned long long ),
            mbedtls_timeconst_samplecmp );
@@ -532,7 +535,7 @@ int mbedtls_timeconst_write_file( mbedtls_timeconst_context *ctx,
     char filepath[256];
 
     mbedtls_snprintf( filepath, sizeof( filepath ),
-                      "./timeconst_results/%s.txt", filename );
+                      "./timeconst_results_rsa/%s.txt", filename );
 
     fp = fopen( filepath, "w" );
     if( fp == NULL )

@@ -2,6 +2,9 @@
 #include "mbedtls/bignum.h"
 #include "mbedtls/timing.h"
 #include "mbedtls/ctr_drbg.h"
+#include "mbedtls/rsa.h"
+#include "mbedtls/md.h"
+#include "mbedtls/error.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -57,9 +60,28 @@ int timeconst_mpi_exp_mod( int samples, int mpi_size,
                                       mbedtls_mpi *),
                            const char *fut_str, unsigned long long time_adj );
 
+int timeconst_rsa_rsaes_pkcs1_v15( int samples, int keysize,
+                                   mbedtls_ctr_drbg_context *ctr_drbg,
+                                   unsigned long long time_adj );
+
+int timeconst_rsa_rsaes_oaep( int samples, int keysize,
+                              mbedtls_ctr_drbg_context *ctr_drbg,
+                              unsigned long long time_adj );
+
+int timeconst_rsa_sign( int samples, int keysize,
+                        mbedtls_ctr_drbg_context *ctr_drbg,
+                        unsigned long long time_adj, int digest_len, int padding,
+                        int (*fut)(mbedtls_rsa_context *,
+                                   int (*)(void *, unsigned char *, size_t),
+                                   void *, int, mbedtls_md_type_t, unsigned int,
+                                   const unsigned char *, unsigned char *),
+                        const char *fut_str );
+
 unsigned long long timeconst_calibrate_clock( unsigned long long (*f_clock)(void) );
 
 int timeconst_increase_priority();
+
+int timeconst_random( void *p_rng, unsigned char *output, size_t output_len );
 
 #define TIMECONST_STATS(ctx,fut_str)                                        \
 {                                                                           \
@@ -72,7 +94,7 @@ int timeconst_increase_priority();
     min = mbedtls_timeconst_min_sample( ctx );                              \
     max = mbedtls_timeconst_max_sample( ctx );                              \
                                                                             \
-    mbedtls_printf( "%-30s%30.2f%30.2f%30.2f%30llu%30llu\n",                \
+    mbedtls_printf( "%-40s%30.2f%30.2f%30.2f%30llu%30llu\n",                \
                     fut_str, median, mean, std_dev, min, max );             \
                                                                             \
     if( ( ret = mbedtls_timeconst_write_file( ctx, fut_str ) ) != 0 )       \
@@ -81,12 +103,273 @@ int timeconst_increase_priority();
 
 #define TIMECONST_TIMEDIFF(start,end,adj)                                   \
     (end - start < adj) ? 0 : end - start - adj
+
+#define TIMECONST_CHECK(code, exp_ret)                                        \
+{                                                                             \
+    ret = code;                                                               \
+    if( ret != exp_ret )                                                      \
+    {                                                                         \
+        mbedtls_strerror( ret, buf, sizeof( buf ) );                          \
+        mbedtls_printf( "Err: %04X, Msg: %s, Code: %s\n", -ret, buf, #code ); \
+        goto exit;                                                            \
+    }                                                                         \
+}
+
 /* END_HEADER */
 
 /* BEGIN_DEPENDENCIES
- * depends_on:MBEDTLS_BIGNUM_C:MBEDTLS_TIMING_C:MBEDTLS_CTR_DRBG_C
+ * depends_on:MBEDTLS_BIGNUM_C:MBEDTLS_TIMING_C:MBEDTLS_CTR_DRBG_C:MBEDTLS_RSA_C
  * END_DEPENDENCIES
  */
+
+/* BEGIN_CASE */
+void timeconst_rsa( int samples )
+{
+    mbedtls_ctr_drbg_context ctr_drbg;
+    unsigned long long time_adj;
+
+    mbedtls_ctr_drbg_init( &ctr_drbg );
+    time_adj = timeconst_calibrate_clock( mbedtls_timing_threadclock );
+    TEST_ASSERT( timeconst_increase_priority() == 0 );
+
+    TEST_ASSERT( mbedtls_ctr_drbg_seed( &ctr_drbg, myrand, NULL, NULL, 0 ) == 0 );
+
+    mbedtls_printf( "\n%-40s%30s%30s%30s%30s%30s\n", "Function under test",
+                    "Median", "Mean", "Std dev", "Min", "Max" );
+
+    TEST_ASSERT( timeconst_rsa_rsaes_pkcs1_v15( samples, 2048,
+                 &ctr_drbg, time_adj ) == 0 );
+    TEST_ASSERT( timeconst_rsa_rsaes_pkcs1_v15( samples, 4096,
+                 &ctr_drbg, time_adj ) == 0 );
+
+    TEST_ASSERT( timeconst_rsa_rsaes_oaep( samples, 2048,
+                 &ctr_drbg, time_adj ) == 0 );
+    TEST_ASSERT( timeconst_rsa_rsaes_oaep( samples, 4096,
+                 &ctr_drbg, time_adj ) == 0 );
+
+    TEST_ASSERT( timeconst_rsa_sign( samples, 2048, &ctr_drbg, time_adj, 256 - 3 - 8,
+                 MBEDTLS_RSA_PKCS_V15, mbedtls_rsa_rsassa_pkcs1_v15_sign,
+                 "mbedtls_rsa_rsassa_pkcs1_v15_sign" ) == 0 );
+    TEST_ASSERT( timeconst_rsa_sign( samples, 4096, &ctr_drbg, time_adj, 512 - 3 - 8,
+                 MBEDTLS_RSA_PKCS_V15, mbedtls_rsa_rsassa_pkcs1_v15_sign,
+                 "mbedtls_rsa_rsassa_pkcs1_v15_sign" ) == 0 );
+
+    TEST_ASSERT( timeconst_rsa_sign( samples, 2048, &ctr_drbg, time_adj, 256,
+                 MBEDTLS_RSA_PKCS_V21, mbedtls_rsa_rsassa_pss_sign,
+                 "mbedtls_rsa_rsassa_pss_sign" ) == 0 );
+    TEST_ASSERT( timeconst_rsa_sign( samples, 2048, &ctr_drbg, time_adj, 512,
+                 MBEDTLS_RSA_PKCS_V21, mbedtls_rsa_rsassa_pss_sign,
+                 "mbedtls_rsa_rsassa_pss_sign" ) == 0 );
+
+exit:
+    mbedtls_ctr_drbg_free( &ctr_drbg );
+}
+
+int my_non_rand( void *ctx, unsigned char *buf, size_t buf_len )
+{
+    (void) ctx;
+
+    memset( buf, 0xBE, buf_len );
+    return( 0 );
+}
+
+int timeconst_rsa_sign( int samples, int keysize,
+                        mbedtls_ctr_drbg_context *ctr_drbg,
+                        unsigned long long time_adj, int digest_len, int padding,
+                        int (*fut)(mbedtls_rsa_context *,
+                                   int (*)(void *, unsigned char *, size_t),
+                                   void *, int, mbedtls_md_type_t, unsigned int,
+                                   const unsigned char *, unsigned char *),
+                        const char *fut_str )
+{
+    size_t i;
+    int ret;
+    unsigned long long start_time, end_time;
+    char buf[1024];
+    unsigned char input[1024], output[1024];
+    mbedtls_timeconst_context timeconst;
+    mbedtls_rsa_context rsa;
+
+    mbedtls_timeconst_init( &timeconst );
+
+    mbedtls_timeconst_setup( &timeconst, (size_t)samples );
+
+    for( i = 0; i < (size_t)samples; i++ )
+    {
+        mbedtls_rsa_init( &rsa, padding, MBEDTLS_MD_SHA256 );
+
+        TIMECONST_CHECK( mbedtls_rsa_gen_key( &rsa, timeconst_random, ctr_drbg,
+                         (unsigned int)keysize, 65537 ), 0 );
+        TIMECONST_CHECK( timeconst_random( ctr_drbg, input, (size_t)digest_len ),
+                         0 );
+
+        start_time = mbedtls_timing_threadclock();
+        ret = fut( &rsa, my_non_rand, NULL, input[0] & 0x01, MBEDTLS_MD_NONE,
+                   (unsigned int)digest_len, input, output );
+        end_time = mbedtls_timing_threadclock();
+        if( ret != 0 )
+        {
+            mbedtls_printf( "i:%zu, ret:%04X\n", i, -ret );
+            goto exit;
+        }
+        TIMECONST_CHECK( mbedtls_timeconst_add_sample( &timeconst,
+                        TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) ), 0 );
+
+        mbedtls_rsa_free( &rsa );
+    }
+
+    mbedtls_snprintf( buf, sizeof( buf ), "%s_%d", fut_str, keysize );
+    TIMECONST_STATS( &timeconst, buf );
+
+    goto free;
+
+exit:
+    mbedtls_rsa_free( &rsa );
+
+free:
+    mbedtls_timeconst_free( &timeconst );
+
+    return( ret );
+}
+
+int timeconst_rsa_rsaes_oaep( int samples, int keysize,
+                              mbedtls_ctr_drbg_context *ctr_drbg,
+                              unsigned long long time_adj )
+{
+    size_t i;
+    int ret;
+    unsigned char input[1024], output[1024];
+    unsigned long long start_time, end_time;
+    size_t olen;
+    size_t keysize_bytes = keysize >> 3;
+    char buf[1024];
+    mbedtls_rsa_context rsa;
+    mbedtls_timeconst_context timeconst_enc, timeconst_dec;
+
+    mbedtls_timeconst_init( &timeconst_dec );
+    mbedtls_timeconst_init( &timeconst_enc );
+
+    memset( input, 0, sizeof( input ) );
+    mbedtls_timeconst_setup( &timeconst_dec, (size_t)samples );
+    mbedtls_timeconst_setup( &timeconst_enc, (size_t)samples );
+
+    for( i = 0; i < (size_t)samples; i++ )
+    {
+        mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_SHA256 );
+
+        TIMECONST_CHECK( mbedtls_rsa_gen_key( &rsa, timeconst_random, ctr_drbg,
+                         (unsigned int)keysize, 65537 ), 0 );
+        TIMECONST_CHECK( timeconst_random( ctr_drbg, input, keysize_bytes - 11 ), 0 );
+
+        start_time = mbedtls_timing_threadclock();
+        ret = mbedtls_rsa_rsaes_oaep_encrypt( &rsa, my_non_rand, NULL,
+              input[0] & 0x01, NULL, 0, keysize_bytes - 66, input, output );
+        end_time = mbedtls_timing_threadclock();
+        if( ret != 0 )
+            goto exit;
+        TIMECONST_CHECK( mbedtls_timeconst_add_sample( &timeconst_enc,
+                        TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) ), 0 );
+
+        start_time = mbedtls_timing_threadclock();
+        ret = mbedtls_rsa_rsaes_oaep_decrypt( &rsa, my_non_rand, NULL,
+              ~input[0] & 0x01, NULL, 0, &olen, output, input, sizeof( input ) );
+        end_time = mbedtls_timing_threadclock();
+        if( ret != 0 )
+            goto exit;
+        TIMECONST_CHECK( mbedtls_timeconst_add_sample( &timeconst_dec,
+                         TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) ), 0 );
+
+        mbedtls_rsa_free( &rsa );
+    }
+
+    mbedtls_snprintf( buf, sizeof( buf ), "mbedtls_rsaes_oaep_encrypt_%d",
+                      keysize );
+    TIMECONST_STATS( &timeconst_enc, buf );
+    mbedtls_snprintf( buf, sizeof( buf ), "mbedtls_rsaes_oaep_decrypt_%d",
+                      keysize );
+    TIMECONST_STATS( &timeconst_dec, buf );
+
+    goto free;
+
+exit:
+    mbedtls_rsa_free( &rsa );
+
+free:
+    mbedtls_timeconst_free( &timeconst_dec );
+    mbedtls_timeconst_free( &timeconst_enc );
+
+    return( ret );
+}
+
+int timeconst_rsa_rsaes_pkcs1_v15( int samples, int keysize,
+                                   mbedtls_ctr_drbg_context *ctr_drbg,
+                                   unsigned long long time_adj )
+{
+    size_t i;
+    int ret;
+    unsigned char input[1024], output[1024];
+    unsigned long long start_time, end_time;
+    size_t olen;
+    size_t keysize_bytes = keysize >> 3;
+    char buf[1024];
+    mbedtls_rsa_context rsa;
+    mbedtls_timeconst_context timeconst_enc, timeconst_dec;
+
+    mbedtls_timeconst_init( &timeconst_dec );
+    mbedtls_timeconst_init( &timeconst_enc );
+
+    memset( input, 0, sizeof( input ) );
+    mbedtls_timeconst_setup( &timeconst_dec, (size_t)samples );
+    mbedtls_timeconst_setup( &timeconst_enc, (size_t)samples );
+
+    for( i = 0; i < (size_t)samples; i++ )
+    {
+        mbedtls_rsa_init( &rsa, MBEDTLS_RSA_PKCS_V15, MBEDTLS_MD_SHA256 );
+
+        TIMECONST_CHECK( mbedtls_rsa_gen_key( &rsa, timeconst_random, ctr_drbg,
+                         (unsigned int)keysize, 65537 ), 0 );
+        TIMECONST_CHECK( timeconst_random( ctr_drbg, input, keysize_bytes - 11 ), 0 );
+
+        start_time = mbedtls_timing_threadclock();
+        ret = mbedtls_rsa_rsaes_pkcs1_v15_encrypt( &rsa, my_non_rand, NULL,
+              input[0] & 0x01, keysize_bytes - 11, input, output );
+        end_time = mbedtls_timing_threadclock();
+        if( ret != 0 )
+            goto exit;
+        TIMECONST_CHECK( mbedtls_timeconst_add_sample( &timeconst_enc,
+                        TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) ), 0 );
+
+        start_time = mbedtls_timing_threadclock();
+        ret = mbedtls_rsa_rsaes_pkcs1_v15_decrypt( &rsa, my_non_rand, NULL,
+              ~input[0] & 0x01, &olen, output, input, sizeof( input ) );
+        end_time = mbedtls_timing_threadclock();
+        if( ret != 0 )
+            goto exit;
+        TIMECONST_CHECK( mbedtls_timeconst_add_sample( &timeconst_dec,
+                         TIMECONST_TIMEDIFF( start_time, end_time, time_adj ) ), 0 );
+
+        mbedtls_rsa_free( &rsa );
+    }
+
+    mbedtls_snprintf( buf, sizeof( buf ), "mbedtls_rsaes_pkcs1_v15_encrypt_%d",
+                      keysize );
+    TIMECONST_STATS( &timeconst_enc, buf );
+    mbedtls_snprintf( buf, sizeof( buf ), "mbedtls_rsaes_pkcs1_v15_decrypt_%d",
+                      keysize );
+    TIMECONST_STATS( &timeconst_dec, buf );
+
+    goto free;
+
+exit:
+    mbedtls_rsa_free( &rsa );
+
+free:
+    mbedtls_timeconst_free( &timeconst_dec );
+    mbedtls_timeconst_free( &timeconst_enc );
+
+    return( ret );
+}
+/* END_CASE */
 
 /* BEGIN_CASE */
 void timeconst_mpi( int samples, int mpi_size )
@@ -100,7 +383,7 @@ void timeconst_mpi( int samples, int mpi_size )
 
     TEST_ASSERT( mbedtls_ctr_drbg_seed( &ctr_drbg, myrand, NULL, NULL, 0 ) == 0 );
 
-    mbedtls_printf( "\n%-21s%30s%30s%30s%30s%30s\n", "Function under test",
+    mbedtls_printf( "\n%-40s%30s%30s%30s%30s%30s\n", "Function under test",
                     "Median", "Mean", "Std dev", "Min", "Max" );
 
     TEST_ASSERT( timeconst_mpi_shift( samples, mpi_size, &ctr_drbg,

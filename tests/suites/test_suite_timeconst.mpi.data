@@ -1,2 +1,5 @@
 Time constness MPI
 timeconst_mpi:1000:256
+
+Time constness RSA
+timeconst_rsa:100
