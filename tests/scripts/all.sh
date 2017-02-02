@@ -234,6 +234,14 @@ ARMC5_AR="$ARMC5_BIN_DIR/armar"
 ARMC6_CC="$ARMC6_BIN_DIR/armclang"
 ARMC6_AR="$ARMC6_BIN_DIR/armar"
 
+export OPENSSL
+export OPENSSL_LEGACY
+export GNUTLS_CLI
+export GNUTLS_SERV
+export GNUTLS_LEGACY_CLI
+export GNUTLS_LEGACY_SERV
+export OUT_OF_SOURCE_DIR
+
 # To avoid setting OpenSSL and GnuTLS for each call to compat.sh and ssl-opt.sh
 # we just export the variables they require
 export OPENSSL_CMD="$OPENSSL"
