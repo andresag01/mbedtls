@@ -43,11 +43,11 @@
 /*
  * Ordered from most preferred to least preferred in terms of security.
  *
- * Current rule (except rc4, weak and null which come last):
+ * Current rule (except rc4 and 3des, weak and null which come last):
  * 1. By key exchange:
  *    Forward-secure non-PSK > forward-secure PSK > ECJPAKE > other non-PSK > other PSK
  * 2. By key length and cipher:
- *    ChaCha > AES-256 > Camellia-256 > ARIA-256 > AES-128 > Camellia-128 > ARIA-128 > 3DES
+ *    ChaCha > AES-256 > Camellia-256 > ARIA-256 > AES-128 > Camellia-128 > ARIA-128
  * 3. By cipher mode when relevant GCM > CCM > CBC > CCM_8
  * 4. By hash function used when relevant
  * 5. By key exchange/auth again: EC > non-EC
@@ -126,11 +126,6 @@ static const int ciphersuite_preference[] =
     MBEDTLS_TLS_ECDHE_RSA_WITH_ARIA_128_CBC_SHA256,
     MBEDTLS_TLS_DHE_RSA_WITH_ARIA_128_CBC_SHA256,
 
-    /* All remaining >= 128-bit ephemeral suites */
-    MBEDTLS_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,
-    MBEDTLS_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
-    MBEDTLS_TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
-
     /* The PSK ephemeral suites */
     MBEDTLS_TLS_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256,
     MBEDTLS_TLS_DHE_PSK_WITH_CHACHA20_POLY1305_SHA256,
@@ -161,9 +156,6 @@ static const int ciphersuite_preference[] =
     MBEDTLS_TLS_DHE_PSK_WITH_ARIA_128_GCM_SHA256,
     MBEDTLS_TLS_ECDHE_PSK_WITH_ARIA_128_CBC_SHA256,
     MBEDTLS_TLS_DHE_PSK_WITH_ARIA_128_CBC_SHA256,
-
-    MBEDTLS_TLS_ECDHE_PSK_WITH_3DES_EDE_CBC_SHA,
-    MBEDTLS_TLS_DHE_PSK_WITH_3DES_EDE_CBC_SHA,
 
     /* The ECJPAKE suite */
     MBEDTLS_TLS_ECJPAKE_WITH_AES_128_CCM_8,
@@ -228,11 +220,6 @@ static const int ciphersuite_preference[] =
     MBEDTLS_TLS_ECDH_RSA_WITH_ARIA_128_CBC_SHA256,
     MBEDTLS_TLS_RSA_WITH_ARIA_128_CBC_SHA256,
 
-    /* All remaining >= 128-bit suites */
-    MBEDTLS_TLS_RSA_WITH_3DES_EDE_CBC_SHA,
-    MBEDTLS_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA,
-    MBEDTLS_TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA,
-
     /* The RSA PSK suites */
     MBEDTLS_TLS_RSA_PSK_WITH_CHACHA20_POLY1305_SHA256,
     MBEDTLS_TLS_RSA_PSK_WITH_AES_256_GCM_SHA384,
@@ -250,8 +237,6 @@ static const int ciphersuite_preference[] =
     MBEDTLS_TLS_RSA_PSK_WITH_CAMELLIA_128_CBC_SHA256,
     MBEDTLS_TLS_RSA_PSK_WITH_ARIA_128_GCM_SHA256,
     MBEDTLS_TLS_RSA_PSK_WITH_ARIA_128_CBC_SHA256,
-
-    MBEDTLS_TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA,
 
     /* The PSK suites */
     MBEDTLS_TLS_PSK_WITH_CHACHA20_POLY1305_SHA256,
@@ -274,6 +259,22 @@ static const int ciphersuite_preference[] =
     MBEDTLS_TLS_PSK_WITH_AES_128_CCM_8,
     MBEDTLS_TLS_PSK_WITH_ARIA_128_GCM_SHA256,
     MBEDTLS_TLS_PSK_WITH_ARIA_128_CBC_SHA256,
+
+    /* 3DES suites */
+    /* All remaining >= 128-bit ephemeral suites */
+    MBEDTLS_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,
+    MBEDTLS_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+    MBEDTLS_TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
+
+    MBEDTLS_TLS_ECDHE_PSK_WITH_3DES_EDE_CBC_SHA,
+    MBEDTLS_TLS_DHE_PSK_WITH_3DES_EDE_CBC_SHA,
+
+    /* All remaining >= 128-bit suites */
+    MBEDTLS_TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+    MBEDTLS_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA,
+    MBEDTLS_TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA,
+
+    MBEDTLS_TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA,
 
     MBEDTLS_TLS_PSK_WITH_3DES_EDE_CBC_SHA,
 
