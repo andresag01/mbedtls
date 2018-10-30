@@ -2188,6 +2188,22 @@ const int *mbedtls_ssl_list_ciphersuites( void )
 static int supported_ciphersuites[MAX_CIPHERSUITES];
 static int supported_init = 0;
 
+static int is_ciphersuite_removed( const mbedtls_ssl_ciphersuite_t *cs_info )
+{
+#if defined(MBEDTLS_REMOVE_ARC4_CIPHERSUITES)
+    if( cs_info->cipher == MBEDTLS_CIPHER_ARC4_128 )
+        return( 1 );
+#endif /* MBEDTLS_REMOVE_ARC4_CIPHERSUITES */
+
+#if defined(MBEDTLS_REMOVE_3DES_CIPHERSUITES)
+    if( cs_info->cipher == MBEDTLS_CIPHER_DES_EDE3_ECB ||
+        cs_info->cipher == MBEDTLS_CIPHER_DES_EDE3_CBC )
+        return( 1 );
+#endif /* MBEDTLS_REMOVE_3DES_CIPHERSUITES */
+
+    return( 0 );
+}
+
 const int *mbedtls_ssl_list_ciphersuites( void )
 {
     /*
@@ -2203,13 +2219,9 @@ const int *mbedtls_ssl_list_ciphersuites( void )
              *p != 0 && q < supported_ciphersuites + MAX_CIPHERSUITES - 1;
              p++ )
         {
-#if defined(MBEDTLS_REMOVE_ARC4_CIPHERSUITES)
             const mbedtls_ssl_ciphersuite_t *cs_info;
             if( ( cs_info = mbedtls_ssl_ciphersuite_from_id( *p ) ) != NULL &&
-                cs_info->cipher != MBEDTLS_CIPHER_ARC4_128 )
-#else
-            if( mbedtls_ssl_ciphersuite_from_id( *p ) != NULL )
-#endif
+                !is_ciphersuite_removed( cs_info ) )
                 *(q++) = *p;
         }
         *q = 0;

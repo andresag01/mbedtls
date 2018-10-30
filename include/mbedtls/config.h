@@ -645,6 +645,19 @@
 #define MBEDTLS_REMOVE_ARC4_CIPHERSUITES
 
 /**
+ * \def MBEDTLS_REMOVE_3DES_CIPHERSUITES
+ *
+ * Remove 3DES ciphersuites by default in SSL / TLS.
+ * This flag removes the ciphersuites based on 3DES from the default list as
+ * returned by mbedtls_ssl_list_ciphersuites(). However, it is still possible
+ * to enable (some of) them with mbedtls_ssl_conf_ciphersuites() by including
+ * them explicitly.
+ *
+ * Uncomment this macro to remove 3DES ciphersuites by default.
+ */
+#define MBEDTLS_REMOVE_3DES_CIPHERSUITES
+
+/**
  * \def MBEDTLS_ECP_DP_SECP192R1_ENABLED
  *
  * MBEDTLS_ECP_XXXX_ENABLED: Enables specific curves within the Elliptic Curve
