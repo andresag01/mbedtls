@@ -43,7 +43,7 @@
 /*
  * Ordered from most preferred to least preferred in terms of security.
  *
- * Current rule (except rc4 and 3des, weak and null which come last):
+ * Current rule (except RC4 and 3DES, weak and null which come last):
  * 1. By key exchange:
  *    Forward-secure non-PSK > forward-secure PSK > ECJPAKE > other non-PSK > other PSK
  * 2. By key length and cipher:
@@ -261,21 +261,15 @@ static const int ciphersuite_preference[] =
     MBEDTLS_TLS_PSK_WITH_ARIA_128_CBC_SHA256,
 
     /* 3DES suites */
-    /* All remaining >= 128-bit ephemeral suites */
     MBEDTLS_TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA,
     MBEDTLS_TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
     MBEDTLS_TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA,
-
     MBEDTLS_TLS_ECDHE_PSK_WITH_3DES_EDE_CBC_SHA,
     MBEDTLS_TLS_DHE_PSK_WITH_3DES_EDE_CBC_SHA,
-
-    /* All remaining >= 128-bit suites */
     MBEDTLS_TLS_RSA_WITH_3DES_EDE_CBC_SHA,
     MBEDTLS_TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA,
     MBEDTLS_TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA,
-
     MBEDTLS_TLS_RSA_PSK_WITH_3DES_EDE_CBC_SHA,
-
     MBEDTLS_TLS_PSK_WITH_3DES_EDE_CBC_SHA,
 
     /* RC4 suites */
@@ -2198,7 +2192,9 @@ static int ciphersuite_is_removed( const mbedtls_ssl_ciphersuite_t *cs_info )
 #if defined(MBEDTLS_REMOVE_3DES_CIPHERSUITES)
     if( cs_info->cipher == MBEDTLS_CIPHER_DES_EDE3_ECB ||
         cs_info->cipher == MBEDTLS_CIPHER_DES_EDE3_CBC )
+    {
         return( 1 );
+    }
 #endif /* MBEDTLS_REMOVE_3DES_CIPHERSUITES */
 
     return( 0 );
@@ -2222,7 +2218,9 @@ const int *mbedtls_ssl_list_ciphersuites( void )
             const mbedtls_ssl_ciphersuite_t *cs_info;
             if( ( cs_info = mbedtls_ssl_ciphersuite_from_id( *p ) ) != NULL &&
                 !ciphersuite_is_removed( cs_info ) )
+            {
                 *(q++) = *p;
+            }
         }
         *q = 0;
 
