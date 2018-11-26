@@ -22,7 +22,7 @@ Features
      MPI multiplications used in ECC and RSA cryptography. Contributed by
      Aurelien Jarno.
    * Add MBEDTLS_REMOVE_3DES_CIPHERSUITES to allow removing 3DES ciphersuites
-     from the default list (inactive by default).
+     from the default list (active by default).
 
 Bugfix
    * Fix a bug in the update function for SSL ticket keys which previously
