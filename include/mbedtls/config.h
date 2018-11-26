@@ -653,7 +653,7 @@
  * to enable (some of) them with mbedtls_ssl_conf_ciphersuites() by including
  * them explicitly.
  *
- * Uncomment this macro to remove 3DES ciphersuites by default.
+ * Comment this macro to keep 3DES in the default ciphersuite list.
  */
 #define MBEDTLS_REMOVE_3DES_CIPHERSUITES
 
