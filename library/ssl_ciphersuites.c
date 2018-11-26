@@ -2188,7 +2188,7 @@ const int *mbedtls_ssl_list_ciphersuites( void )
 static int supported_ciphersuites[MAX_CIPHERSUITES];
 static int supported_init = 0;
 
-static int is_ciphersuite_removed( const mbedtls_ssl_ciphersuite_t *cs_info )
+static int ciphersuite_is_removed( const mbedtls_ssl_ciphersuite_t *cs_info )
 {
 #if defined(MBEDTLS_REMOVE_ARC4_CIPHERSUITES)
     if( cs_info->cipher == MBEDTLS_CIPHER_ARC4_128 )
@@ -2221,7 +2221,7 @@ const int *mbedtls_ssl_list_ciphersuites( void )
         {
             const mbedtls_ssl_ciphersuite_t *cs_info;
             if( ( cs_info = mbedtls_ssl_ciphersuite_from_id( *p ) ) != NULL &&
-                !is_ciphersuite_removed( cs_info ) )
+                !ciphersuite_is_removed( cs_info ) )
                 *(q++) = *p;
         }
         *q = 0;
