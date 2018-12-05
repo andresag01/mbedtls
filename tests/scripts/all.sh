@@ -836,6 +836,13 @@ msg "test: MBEDTLS_NO_64BIT_MULTIPLICATION native" # ~ 10s
 make test
 
 
+msg "build: default config with MBEDTLS_SSL_HW_RECORD_ACCEL enabled"
+cleanup
+cp "$CONFIG_H" "$CONFIG_BAK"
+scripts/config.pl set MBEDTLS_SSL_HW_RECORD_ACCEL
+make
+
+
 msg "build: arm-none-eabi-gcc, make" # ~ 10s
 cleanup
 cp "$CONFIG_H" "$CONFIG_BAK"
