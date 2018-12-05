@@ -1293,6 +1293,9 @@
  * Enable hooking functions in SSL module for hardware acceleration of
  * individual records.
  *
+ * \deprecated This option is deprecated and will likely be removed in a
+ *             future version of Mbed TLS.
+ *
  * Uncomment this macro to enable hooking functions.
  */
 //#define MBEDTLS_SSL_HW_RECORD_ACCEL
