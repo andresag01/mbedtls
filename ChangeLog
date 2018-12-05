@@ -22,6 +22,10 @@ Security
    * Wipe sensitive buffers on the stack in the CTR_DRBG and HMAC_DRBG
      modules.
 
+Bugfix
+   * Fix compilation failure when both MBEDTLS_SSL_PROTO_DTLS and
+     MBEDTLS_SSL_HW_RECORD_ACCEL are enabled.
+
 API Changes
    * The following functions in the random generator modules have been
      deprecated and replaced as shown below. The new functions change
