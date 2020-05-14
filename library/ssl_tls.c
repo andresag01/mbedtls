@@ -8058,11 +8058,17 @@ int mbedtls_ssl_handshake_step( mbedtls_ssl_context *ssl )
 
 #if defined(MBEDTLS_SSL_CLI_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_CLIENT )
+    {
+        printString("Client\n");
         ret = mbedtls_ssl_handshake_client_step( ssl );
+    }
 #endif
 #if defined(MBEDTLS_SSL_SRV_C)
     if( ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER )
+    {
+        printString("Server\n");
         ret = mbedtls_ssl_handshake_server_step( ssl );
+    }
 #endif
 
     return( ret );
@@ -8078,7 +8084,7 @@ int mbedtls_ssl_handshake( mbedtls_ssl_context *ssl )
     if( ssl == NULL || ssl->conf == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> handshake" ) );
+    printString( "=> handshake\n" );
 
     while( ssl->state != MBEDTLS_SSL_HANDSHAKE_OVER )
     {
@@ -8088,7 +8094,7 @@ int mbedtls_ssl_handshake( mbedtls_ssl_context *ssl )
             break;
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= handshake" ) );
+    printString( "<= handshake\n" );
 
     return( ret );
 }

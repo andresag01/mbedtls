@@ -226,7 +226,7 @@ mbedtls_x509_time;
  * \return         The length of the string written (not including the
  *                 terminated nul byte), or a negative error code.
  */
-int mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *dn );
+//int mbedtls_x509_dn_gets( char *buf, size_t size, const mbedtls_x509_name *dn );
 
 /**
  * \brief          Store the certificate serial in printable form into buf;
@@ -301,10 +301,10 @@ int mbedtls_x509_get_serial( unsigned char **p, const unsigned char *end,
                      mbedtls_x509_buf *serial );
 int mbedtls_x509_get_ext( unsigned char **p, const unsigned char *end,
                   mbedtls_x509_buf *ext, int tag );
-int mbedtls_x509_sig_alg_gets( char *buf, size_t size, const mbedtls_x509_buf *sig_oid,
-                       mbedtls_pk_type_t pk_alg, mbedtls_md_type_t md_alg,
-                       const void *sig_opts );
-int mbedtls_x509_key_size_helper( char *buf, size_t buf_size, const char *name );
+//int mbedtls_x509_sig_alg_gets( char *buf, size_t size, const mbedtls_x509_buf *sig_oid,
+//                       mbedtls_pk_type_t pk_alg, mbedtls_md_type_t md_alg,
+//                       const void *sig_opts );
+//int mbedtls_x509_key_size_helper( char *buf, size_t buf_size, const char *name );
 int mbedtls_x509_string_to_names( mbedtls_asn1_named_data **head, const char *name );
 int mbedtls_x509_set_extension( mbedtls_asn1_named_data **head, const char *oid, size_t oid_len,
                         int critical, const unsigned char *val,

@@ -771,11 +771,11 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
     int uses_ec = 0;
 #endif
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "=> write client hello" ) );
+    printString( "=> write client hello\n" );
 
     if( ssl->conf->f_rng == NULL )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "no RNG provided") );
+        printString( "no RNG provided\n");
         return( MBEDTLS_ERR_SSL_NO_RNG );
     }
 
@@ -789,8 +789,8 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
 
     if( ssl->conf->max_major_ver == 0 )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 1, ( "configured max major version is invalid, "
-                            "consider using mbedtls_ssl_config_defaults()" ) );
+        printString( "configured max major version is invalid, "
+                     "consider using mbedtls_ssl_config_defaults()\n" );
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
     }
 
@@ -808,17 +808,25 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
                        ssl->conf->transport, p );
     p += 2;
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, max version: [%d:%d]",
-                   buf[4], buf[5] ) );
+    printString( "client hello, max version: [" );
+	printHex(buf[4]); putchar(','); printHex(buf[5]); printString("]\n");
 
     if( ( ret = ssl_generate_random( ssl ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "ssl_generate_random", ret );
+        printString("ssl_generate_random:");
+		printHex(ret );
+		putchar('\n');
         return( ret );
     }
 
     memcpy( p, ssl->handshake->randbytes, 32 );
-    MBEDTLS_SSL_DEBUG_BUF( 3, "client hello, random bytes", p, 32 );
+    printString("client hello, random bytes:");
+	uint32_t xx;
+	for (xx = 0; xx < 32; xx++)
+	{
+		putchar(' ' ); printHex(p[xx] );
+	}
+	printString("\n");
     p += 32;
 
     /*
@@ -871,8 +879,13 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
     for( i = 0; i < n; i++ )
         *p++ = ssl->session_negotiate->id[i];
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, session id len.: %d", n ) );
-    MBEDTLS_SSL_DEBUG_BUF( 3,   "client hello, session id", buf + 39, n );
+    printString( "client hello, session id len.:"); printHex( n ); putchar('\n');
+	printString( "client hello, session id:" );
+	for (xx = 0; xx < n; xx++ )
+	{
+		putchar(' '); printHex((buf + 39)[xx]);
+	}
+	putchar('\n');
 
     /*
      * DTLS cookie
@@ -918,8 +931,8 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
                                       ssl->conf->max_minor_ver ) != 0 )
             continue;
 
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, add ciphersuite: %04x",
-                                    ciphersuites[i] ) );
+        printString( "client hello, add ciphersuite: " );
+		printHex( ciphersuites[i] ); putchar('\n');
 
 #if defined(MBEDTLS_ECDH_C) || defined(MBEDTLS_ECDSA_C) || \
     defined(MBEDTLS_KEY_EXCHANGE_ECJPAKE_ENABLED)
@@ -931,7 +944,8 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
         *p++ = (unsigned char)( ciphersuites[i]      );
     }
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, got %d ciphersuites (excluding SCSVs)", n ) );
+	printString( "client hello, got "); printHex(n);
+	printString( " ciphersuites (excluding SCSVs)\n");
 
     /*
      * Add TLS_EMPTY_RENEGOTIATION_INFO_SCSV
@@ -940,7 +954,7 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
     if( ssl->renego_status == MBEDTLS_SSL_INITIAL_HANDSHAKE )
 #endif
     {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding EMPTY_RENEGOTIATION_INFO_SCSV" ) );
+        printString( "adding EMPTY_RENEGOTIATION_INFO_SCSV" );
         *p++ = (unsigned char)( MBEDTLS_SSL_EMPTY_RENEGOTIATION_INFO >> 8 );
         *p++ = (unsigned char)( MBEDTLS_SSL_EMPTY_RENEGOTIATION_INFO      );
         n++;
@@ -950,7 +964,7 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
 #if defined(MBEDTLS_SSL_FALLBACK_SCSV)
     if( ssl->conf->fallback == MBEDTLS_SSL_IS_FALLBACK )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "adding FALLBACK_SCSV" ) );
+        printString( "adding FALLBACK_SCSV" );
         *p++ = (unsigned char)( MBEDTLS_SSL_FALLBACK_SCSV_VALUE >> 8 );
         *p++ = (unsigned char)( MBEDTLS_SSL_FALLBACK_SCSV_VALUE      );
         n++;
@@ -979,9 +993,10 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
 
     if( offer_compress )
     {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, compress len.: %d", 2 ) );
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, compress alg.: %d %d",
-                            MBEDTLS_SSL_COMPRESS_DEFLATE, MBEDTLS_SSL_COMPRESS_NULL ) );
+        printString( "client hello, compress len.: 2\n" );
+        printString( "client hello, compress alg.: ");
+		printHex(MBEDTLS_SSL_COMPRESS_DEFLATE); putchar(' ');
+		printHex(MBEDTLS_SSL_COMPRESS_NULL ); putchar('\n');
 
         *p++ = 2;
         *p++ = MBEDTLS_SSL_COMPRESS_DEFLATE;
@@ -989,9 +1004,9 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
     }
     else
     {
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, compress len.: %d", 1 ) );
-        MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, compress alg.: %d",
-                            MBEDTLS_SSL_COMPRESS_NULL ) );
+        printString( "client hello, compress len.: 1\n" );
+        printString( "client hello, compress alg.: ");
+		printHex( MBEDTLS_SSL_COMPRESS_NULL ); putchar('\n');
 
         *p++ = 1;
         *p++ = MBEDTLS_SSL_COMPRESS_NULL;
@@ -1067,8 +1082,8 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
     /* olen unused if all extensions are disabled */
     ((void) olen);
 
-    MBEDTLS_SSL_DEBUG_MSG( 3, ( "client hello, total extension length: %d",
-                   ext_len ) );
+    printString( "client hello, total extension length: ");
+	printHex( ext_len ); putchar('\n');
 
     if( ext_len > 0 )
     {
@@ -1090,7 +1105,8 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
 
     if( ( ret = mbedtls_ssl_write_handshake_msg( ssl ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_write_handshake_msg", ret );
+        printString( "mbedtls_ssl_write_handshake_msg " );
+		printHex(ret); putchar('\n');
         return( ret );
     }
 
@@ -1098,12 +1114,14 @@ static int ssl_write_client_hello( mbedtls_ssl_context *ssl )
     if( ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
         ( ret = mbedtls_ssl_flight_transmit( ssl ) ) != 0 )
     {
-        MBEDTLS_SSL_DEBUG_RET( 1, "mbedtls_ssl_flight_transmit", ret );
+        printString("mbedtls_ssl_flight_transmit ");
+		printHex(ret);
+		putchar('\n');
         return( ret );
     }
 #endif /* MBEDTLS_SSL_PROTO_DTLS */
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "<= write client hello" ) );
+    printString( "<= write client hello\n" );
 
     return( 0 );
 }
@@ -3497,7 +3515,9 @@ int mbedtls_ssl_handshake_client_step( mbedtls_ssl_context *ssl )
     if( ssl->state == MBEDTLS_SSL_HANDSHAKE_OVER || ssl->handshake == NULL )
         return( MBEDTLS_ERR_SSL_BAD_INPUT_DATA );
 
-    MBEDTLS_SSL_DEBUG_MSG( 2, ( "client state: %d", ssl->state ) );
+    printString( "client state:" );
+	printHex( ssl->state );
+	putchar('\n');
 
     if( ( ret = mbedtls_ssl_flush_output( ssl ) ) != 0 )
         return( ret );

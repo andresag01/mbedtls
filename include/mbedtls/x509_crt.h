@@ -292,8 +292,8 @@ int mbedtls_x509_crt_parse_path( mbedtls_x509_crt *chain, const char *path );
  * \return         The length of the string written (not including the
  *                 terminated nul byte), or a negative error code.
  */
-int mbedtls_x509_crt_info( char *buf, size_t size, const char *prefix,
-                   const mbedtls_x509_crt *crt );
+//int mbedtls_x509_crt_info( char *buf, size_t size, const char *prefix,
+//                   const mbedtls_x509_crt *crt );
 
 /**
  * \brief          Returns an informational string about the
@@ -307,8 +307,8 @@ int mbedtls_x509_crt_info( char *buf, size_t size, const char *prefix,
  * \return         The length of the string written (not including the
  *                 terminated nul byte), or a negative error code.
  */
-int mbedtls_x509_crt_verify_info( char *buf, size_t size, const char *prefix,
-                          uint32_t flags );
+//int mbedtls_x509_crt_verify_info( char *buf, size_t size, const char *prefix,
+//                          uint32_t flags );
 
 /**
  * \brief          Verify the certificate signature
